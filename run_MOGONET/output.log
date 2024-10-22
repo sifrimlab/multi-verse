@@ -1,0 +1,312 @@
+/vsc-hard-mounts/leuven-data/351/vsc35121/IBP_Multiverse/multi-verse/MOGONET/utils.py:48: UserWarning: torch.sparse.SparseTensor(indices, values, shape, *, device=) is deprecated.  Please use torch.sparse_coo_tensor(indices, values, shape, dtype=, device=). (Triggered internally at /croot/pytorch-select_1725478810240/work/torch/csrc/utils/tensor_new.cpp:621.)
+  return sparse_tensortype(indices, values, x.size())
+
+Pretrain GCNs...
+
+Training...
+
+Test: Epoch 0
+Test ACC: 0.528
+Test F1: 0.167
+Test AUC: 0.657
+
+
+Test: Epoch 50
+Test ACC: 0.764
+Test F1: 0.766
+Test AUC: 0.862
+
+
+Test: Epoch 100
+Test ACC: 0.783
+Test F1: 0.768
+Test AUC: 0.872
+
+
+Test: Epoch 150
+Test ACC: 0.830
+Test F1: 0.816
+Test AUC: 0.907
+
+
+Test: Epoch 200
+Test ACC: 0.802
+Test F1: 0.784
+Test AUC: 0.909
+
+
+Test: Epoch 250
+Test ACC: 0.821
+Test F1: 0.812
+Test AUC: 0.912
+
+
+Test: Epoch 300
+Test ACC: 0.821
+Test F1: 0.812
+Test AUC: 0.908
+
+
+Test: Epoch 350
+Test ACC: 0.830
+Test F1: 0.824
+Test AUC: 0.906
+
+
+Test: Epoch 400
+Test ACC: 0.830
+Test F1: 0.836
+Test AUC: 0.898
+
+
+Test: Epoch 450
+Test ACC: 0.840
+Test F1: 0.838
+Test AUC: 0.909
+
+
+Test: Epoch 500
+Test ACC: 0.821
+Test F1: 0.822
+Test AUC: 0.897
+
+
+Test: Epoch 550
+Test ACC: 0.830
+Test F1: 0.820
+Test AUC: 0.897
+
+
+Test: Epoch 600
+Test ACC: 0.830
+Test F1: 0.824
+Test AUC: 0.898
+
+
+Test: Epoch 650
+Test ACC: 0.830
+Test F1: 0.820
+Test AUC: 0.903
+
+
+Test: Epoch 700
+Test ACC: 0.830
+Test F1: 0.824
+Test AUC: 0.891
+
+
+Test: Epoch 750
+Test ACC: 0.811
+Test F1: 0.808
+Test AUC: 0.892
+
+
+Test: Epoch 800
+Test ACC: 0.830
+Test F1: 0.827
+Test AUC: 0.877
+
+
+Test: Epoch 850
+Test ACC: 0.774
+Test F1: 0.739
+Test AUC: 0.888
+
+
+Test: Epoch 900
+Test ACC: 0.821
+Test F1: 0.816
+Test AUC: 0.895
+
+
+Test: Epoch 950
+Test ACC: 0.802
+Test F1: 0.814
+Test AUC: 0.875
+
+
+Test: Epoch 1000
+Test ACC: 0.792
+Test F1: 0.788
+Test AUC: 0.873
+
+
+Test: Epoch 1050
+Test ACC: 0.802
+Test F1: 0.788
+Test AUC: 0.870
+
+
+Test: Epoch 1100
+Test ACC: 0.821
+Test F1: 0.816
+Test AUC: 0.876
+
+
+Test: Epoch 1150
+Test ACC: 0.821
+Test F1: 0.822
+Test AUC: 0.892
+
+
+Test: Epoch 1200
+Test ACC: 0.811
+Test F1: 0.821
+Test AUC: 0.892
+
+
+Test: Epoch 1250
+Test ACC: 0.830
+Test F1: 0.827
+Test AUC: 0.879
+
+
+Test: Epoch 1300
+Test ACC: 0.821
+Test F1: 0.808
+Test AUC: 0.874
+
+
+Test: Epoch 1350
+Test ACC: 0.802
+Test F1: 0.807
+Test AUC: 0.868
+
+
+Test: Epoch 1400
+Test ACC: 0.821
+Test F1: 0.816
+Test AUC: 0.880
+
+
+Test: Epoch 1450
+Test ACC: 0.811
+Test F1: 0.800
+Test AUC: 0.883
+
+
+Test: Epoch 1500
+Test ACC: 0.792
+Test F1: 0.800
+Test AUC: 0.888
+
+
+Test: Epoch 1550
+Test ACC: 0.811
+Test F1: 0.804
+Test AUC: 0.895
+
+
+Test: Epoch 1600
+Test ACC: 0.792
+Test F1: 0.780
+Test AUC: 0.866
+
+
+Test: Epoch 1650
+Test ACC: 0.821
+Test F1: 0.819
+Test AUC: 0.894
+
+
+Test: Epoch 1700
+Test ACC: 0.811
+Test F1: 0.796
+Test AUC: 0.873
+
+
+Test: Epoch 1750
+Test ACC: 0.821
+Test F1: 0.808
+Test AUC: 0.883
+
+
+Test: Epoch 1800
+Test ACC: 0.802
+Test F1: 0.807
+Test AUC: 0.871
+
+
+Test: Epoch 1850
+Test ACC: 0.783
+Test F1: 0.777
+Test AUC: 0.863
+
+
+Test: Epoch 1900
+Test ACC: 0.821
+Test F1: 0.822
+Test AUC: 0.865
+
+
+Test: Epoch 1950
+Test ACC: 0.821
+Test F1: 0.812
+Test AUC: 0.881
+
+
+Test: Epoch 2000
+Test ACC: 0.792
+Test F1: 0.792
+Test AUC: 0.879
+
+
+Test: Epoch 2050
+Test ACC: 0.830
+Test F1: 0.824
+Test AUC: 0.893
+
+
+Test: Epoch 2100
+Test ACC: 0.840
+Test F1: 0.835
+Test AUC: 0.881
+
+
+Test: Epoch 2150
+Test ACC: 0.830
+Test F1: 0.816
+Test AUC: 0.887
+
+
+Test: Epoch 2200
+Test ACC: 0.830
+Test F1: 0.827
+Test AUC: 0.881
+
+
+Test: Epoch 2250
+Test ACC: 0.745
+Test F1: 0.761
+Test AUC: 0.870
+
+
+Test: Epoch 2300
+Test ACC: 0.830
+Test F1: 0.816
+Test AUC: 0.883
+
+
+Test: Epoch 2350
+Test ACC: 0.821
+Test F1: 0.822
+Test AUC: 0.882
+
+
+Test: Epoch 2400
+Test ACC: 0.830
+Test F1: 0.824
+Test AUC: 0.872
+
+
+Test: Epoch 2450
+Test ACC: 0.802
+Test F1: 0.784
+Test AUC: 0.886
+
+
+Test: Epoch 2500
+Test ACC: 0.802
+Test F1: 0.811
+Test AUC: 0.886
+
