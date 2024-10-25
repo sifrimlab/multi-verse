@@ -1,0 +1,10 @@
+TEA_multiVI (mowgli_datasets):
+    1 gpu_p100 node
+    2 cores
+    8gb mem
+    model.train() step on raw data (not processed):
+        rna = 8213 x 103429
+        atac = 8213 x 64009
+        protein = 8213 x 46 => adata_mvi.obsm["protein_expression"]
+        500 epochs
+        => 20+ mins -> only 269 epochs were run, stoped when training loss not improved over last 50 epochs
