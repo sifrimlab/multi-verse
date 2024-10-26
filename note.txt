@@ -1,0 +1,7 @@
+- Mowgli takes a lot of resources when using their preprocessed data with their orignial model
+	=> TEA datasets when preprocessing is reduced to 500 top genes and 3000 peaks instead of 2500 top genes and 15000 peaks
+	=> Number of iteration when training the model is reduced in half
+
+- totalVI unfortunately only integrate scRNA and protein_expression specifically
+	=> I change to multiVI (works with the same environment) which can integrate TEA dataset (scRNA, scATAC, protein_expr)
+
