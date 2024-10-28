@@ -1,0 +1,14 @@
+name: mowgli-env 
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.8,<3.12
+  - pytorch
+  - numpy
+  - mudata
+  - tqdm
+  - scanpy
+  - anndata
+  - matplotlib
+  - scikit-learn
+  - scipy
