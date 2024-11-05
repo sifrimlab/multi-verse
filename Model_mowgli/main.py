@@ -18,7 +18,7 @@ import leidenalg
 
 
 def main():
-    data_dir = "/mowgli/data_TEA/"  # Path to the mounted data directory
+    data_dir = "/app/data_TEA/"  # Path to the mounted data directory
     # Load the data.
     mdata_TEA = mu.read_h5mu(data_dir + "GSM4949911_tea_preprocessed.h5mu.gz")
 
@@ -31,7 +31,7 @@ def main():
     if boo:
         print("GPU available")
         device=torch.device("cuda:0")
-        model.train(mdata_TEA, device=device, optim_name='sgd', lr=0.01, tol_inner=1e-7)
+        model.train(mdata_TEA, device=device, optim_name='sgd', lr=0.01, tol_inner=1e-5)
         #Save model and losses
         np.save(data_dir +"embeddings/mowgli_GSM4949911.npy",
             {
