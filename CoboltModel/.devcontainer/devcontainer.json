@@ -1,0 +1,8 @@
+{
+    "name": "CoboltModel",
+    "image": "cobolt_image_chen:latest",
+    "workspaceFolder": "/CoboltModel",
+    "mounts": [
+      "source=cobolt_data,target=/CoboltModel/data,type=volume"
+    ]
+  }
