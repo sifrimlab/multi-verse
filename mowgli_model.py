@@ -15,7 +15,29 @@ import torch
 import leidenalg
 
 class Mowgli_Model:
-    """Mowgli model implementation."""
+    """Mowgli model implementation.
+    
+    example implementation:
+    
+    from model import MowgliModel
+
+    def main():
+        data_dir = '/path/to/data'
+        dataset = ...  # Load your dataset
+        latent_dimensions = 50
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        learning_rate = 0.01
+
+        mowgli_model = MowgliModel(data_dir, dataset, latent_dimensions, device, learning_rate)
+        mowgli_model.train()
+        mowgli_model.save_latent()
+        mowgli_model.load_latent()
+        mowgli_model.umap()
+
+    if __name__ == "__main__":
+        main()
+    
+    """
     
     def __init__(self, data_dir, dataset, latent_dimensions, device, learning_rate):
         print("Initializing Mowgli Model")
@@ -31,7 +53,6 @@ class Mowgli_Model:
         # Ensure output directory exists
         self.output_dir = os.path.join(self.data_dir, "mowgli_output")
         os.makedirs(self.output_dir, exist_ok=True)
-
 
     def train(self):
         """Train the Mowgli model."""
@@ -69,6 +90,7 @@ class Mowgli_Model:
                     "loss_h": self.model.losses_h
                 }
             )
+
         except Exception as e:
             print(f"Error saving latent data: {e}")
 
@@ -86,7 +108,7 @@ class Mowgli_Model:
         except Exception as e:
             print(f"Error loading latent data: {e}")
 
-    def umap(self, num_neighbors=15, umap_size=20, umap_alpha=0.8, filename='umap_plot.png'):
+    def umap(self, num_neighbors=15, umap_size=20, umap_alpha=0.8, filename=f'mowgli_{self.dataset}_umap_plot.png'):
         """Generate UMAP visualization."""
         print("Generating UMAP plot")
         try:
@@ -97,5 +119,8 @@ class Mowgli_Model:
             # Save the plot
             plt.savefig(os.path.join(self.output_dir, filename))
             plt.close()
+            
+            print(f"A UMAP plot for Mowgli model with dataset {self.dataset} was succesfully generated and saved as {filename}")
+
         except Exception as e:
             print(f"Error generating UMAP: {e}")
