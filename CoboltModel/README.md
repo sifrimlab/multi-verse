@@ -14,7 +14,7 @@ docker run --rm -it -v volume_cobolt:/data image_cobolt:latest sh -c "ls /data"
 2. If data are scuccesfully accessible run the docker:
 
 ```bash
-docker run --rm -v volume_cobolt:CoboltMOdel/data image_cobolt:latest
+docker run --rm -v volume_cobolt:/CoboltModel/data image_cobolt:latest
 ```
 
 ## License
