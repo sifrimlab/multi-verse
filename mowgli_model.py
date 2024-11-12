@@ -15,7 +15,7 @@ import torch
 import leidenalg
 
 class Mowgli_Model:
-    """Mowgli model implementation with train, evaluate, and predict methods."""
+    """Mowgli model implementation."""
     
     def __init__(self, data_dir, dataset, latent_dimensions, device, learning_rate):
         print("Initializing Mowgli Model")
@@ -24,43 +24,78 @@ class Mowgli_Model:
         self.latent_dimensions = latent_dimensions
         self.device = device
         self.learning_rate = learning_rate
-        # Add any initialization logic (e.g., loading data, model setup, etc.)
+        
+        # Create the model instance during initialization
+        self.model = mowgli.models.MowgliModel(latent_dim=self.latent_dimensions)
+        
+        # Ensure output directory exists
+        self.output_dir = os.path.join(self.data_dir, "mowgli_output")
+        os.makedirs(self.output_dir, exist_ok=True)
 
-    def model(self)
-        print("Defining the model")
-        model = mowgli.models.MowgliModel(latent_dim=self.latent_dimensions)
-        return model
 
-    def train(self, model):
+    def train(self):
+        """Train the Mowgli model."""
         print("Training Mowgli Model")
-        model.train(self.dataset, device=self.device, optim_name='sgd', lr=self.learning_rate, tol_inner=1e-5)
+        try:
+            self.model.train(
+                self.dataset,
+                device=self.device,
+                optim_name='sgd',
+                lr=self.learning_rate,
+                tol_inner=1e-5
+            )
+        except Exception as e:
+            print(f"Error during training: {e}")
+            raise
 
     def evaluate(self):
+        """Evaluate the Mowgli model."""
         print("Evaluating Mowgli Model")
-        # Add evaluation logic for Mowgli here
-        raise NotImplementedError
+        # Add evaluation logic here (e.g., metrics calculation)
+        raise NotImplementedError("Evaluation method not implemented yet.")
+
 
     def save_latent(self):
-        print("Saving data generated with Mowgli Model")
-        np.save(self.data_dir + f("mowgli_output/mowgli_",self.dataset,".npy"),
-            {
-                "W": self.dataset.obsm["W_OT"],
-                **{"H_" + mod: self.dataset[mod].uns["H_OT"] for mod in self.dataset.mod},
-                "loss_overall": model.losses,
-                "loss_w": model.losses_w,
-                "loss_h": model.losses_h
-            },
+        """Save latent data generated with the Mowgli model."""
+        print("Saving latent data")
+        try:
+            np.save(
+                os.path.join(self.output_dir, f"mowgli_{self.dataset}.npy"),
+                {
+                    "W": self.dataset.obsm["W_OT"],
+                    **{"H_" + mod: self.dataset[mod].uns["H_OT"] for mod in self.dataset.mod},
+                    "loss_overall": self.model.losses,
+                    "loss_w": self.model.losses_w,
+                    "loss_h": self.model.losses_h
+                }
             )
+        except Exception as e:
+            print(f"Error saving latent data: {e}")
 
     def load_latent(self):
-        print("Loading data")
-        mowgli_data = np.load(data_dir+f("mowgli_output/mowgli_",self.dataset,".npy", allow_pickle=True).item()["W"]
-        self.dataset.obsm["mowgli_data"] = mowgli_data
-        self.dataset.uns = {}
-        return mowgli_data
+        """Load latent data from saved files."""
+        print("Loading latent data")
+        try:
+            file_path = os.path.join(self.output_dir, f"mowgli_{self.dataset}.npy")
+            mowgli_data = np.load(file_path, allow_pickle=True).item()
+            self.dataset.obsm["W_mowgli"] = mowgli_data["W"]
+            self.dataset.uns = {}
+            return mowgli_data
+        except FileNotFoundError:
+            print(f"File not found: {file_path}")
+        except Exception as e:
+            print(f"Error loading latent data: {e}")
 
-    def umap(self, num_neighbors, umap_size, umap_alpha, filename):
-        print("Mapping the Mowgli umap")
-        sc.pp.neighbors(self.dataset, use_rep="X_mowgli", n_neighbors=num_neighbors)
-        sc.tl.umap(self.dataset)
-        sc.pl.umap(self.dataset, size=umap_size, alpha=umap_alpha, save=data_dir+filename)
+    def umap(self, num_neighbors=15, umap_size=20, umap_alpha=0.8, filename='umap_plot.png'):
+        """Generate UMAP visualization."""
+        print("Generating UMAP plot")
+        try:
+            sc.pp.neighbors(self.dataset, use_rep="X_mowgli", n_neighbors=num_neighbors)
+            sc.tl.umap(self.dataset)
+            sc.pl.umap(self.dataset, size=umap_size, alpha=umap_alpha)
+            
+            # Save the plot
+            plt.savefig(os.path.join(self.output_dir, filename))
+            plt.close()
+        except Exception as e:
+            print(f"Error generating UMAP: {e}")
