@@ -1,0 +1,19 @@
+{
+    "training": {
+      "batch_size": null, 
+      "epochs": 700,
+      "learning_rate": 3e-4,
+      "latent_dim": 3,
+      " ts ":[30, 50, 70],
+      " use_anchor": false ,
+      "use_potential" : false ,
+      "k": 3,
+      "reg_d": 1,
+      "reg_g": 1,
+      "reg_mmd": 1,
+      "l_dist_type": "kl",
+      "seed": 0,
+      "device": "cuda"
+    }
+  }
+  

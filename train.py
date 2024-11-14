@@ -1,5 +1,5 @@
 import torch
-
+import json
 
 class Trainer:
     def __init__(self, model, train_dataloader, val_dataloader, config, device):
@@ -7,7 +7,8 @@ class Trainer:
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.device = device
-        self.epochs = config['epochs']
+        self.epochs = config["training"]['epochs']
+        self.learning_rate = config["training"]["learning_rate"]
 
     def train(self):
         for epoch in range(self.epochs):
