@@ -15,12 +15,3 @@ class Trainer:
             val_loss = self.evaluate()
             print(
                 f"Epoch {epoch+1}/{self.epochs}, Train Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
-
-    def evaluate(self):
-        self.model.eval()
-        total_loss = 0
-        with torch.no_grad():
-            for batch in self.val_dataloader:
-                loss = self._evaluate_batch(batch)
-                total_loss += loss.item()
-        return total_loss / len(self.val_dataloader)
