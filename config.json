@@ -1,8 +1,8 @@
 {
     "training": {
       "batch_size": null, 
-      "epochs": 700,
-      "learning_rate": 3e-4,
+      "epochs": 70,
+      "learning_rate": 0.001,
       "latent_dim": 3,
       " ts ":[30, 50, 70],
       " use_anchor": false ,
