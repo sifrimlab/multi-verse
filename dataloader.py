@@ -110,8 +110,8 @@ class DataLoader:
         """
          # Modality and file_path should be provided for the read_anndata() function to work
         if self.modality != "" and self.file_path != "":
+            self.read_anndata()
             if not self.is_preprocessed:
-                self.read_anndata()
                 self.data.var_names_make_unique()
                 self.data.layers["counts"] = self.data.X.copy()
                 pre = Preprocessing(self.data)
