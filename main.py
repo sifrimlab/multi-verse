@@ -1,7 +1,7 @@
 from config import load_config
 from dataloader import DataLoaderFactory
 from model import ModelFactory
-from train import Trainer
+from train import TrainerSL, TrainerUL
 import torch
 
 
@@ -18,12 +18,19 @@ class Main:
         self.val_dataloader = self.dataloader_factory.get_dataloader('val')
 
         # Initialize Trainer with both train and validation dataloaders
-        self.trainer = Trainer(self.model, self.train_dataloader,
-                               self.val_dataloader, self.config, self.device)
+        if self.model == MOFA or self.model == MOWGLI:
+            self.trainerSL = TrainerSL(self.model, self.train_dataloader,
+                                self.val_dataloader, self.config, self.device)
+        else:
+            self.trainerUL = TrainerUL(self.model, self.train_dataloader, self.config, self.device)
 
     def run(self):
         # Move training process to Trainer
-        self.trainer.train()
+        if self.model == MOFA or self.model == MOWGLI:
+            self.trainerSL.train()
+        else:
+            self.trainerUL.train()
+
 
 
 if __name__ == "__main__":
