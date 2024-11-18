@@ -24,7 +24,7 @@ class MOFA_Model:
         """
         if device=='cpu':
             self.gpu_mode = False
-        if device=='gpu' 
+        if device=='gpu':
             self.gpu_mode = True
         else:
             print(f"Invalid device '{device}' specified. Use 'cpu' or 'gpu'.")
