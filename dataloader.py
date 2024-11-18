@@ -1,9 +1,9 @@
-import json
-import os
 import scanpy as sc
 import anndata as ad
 import mudata as md
 import muon as mu
+import os
+import numpy as np
 from typing import List
 
 #Output type = anndata, mudata, cobolt_data_object?
@@ -18,6 +18,7 @@ class DataLoader:
     def read_anndata(self) -> ad.AnnData:
         """
         Read files as anndata object
+        Note that if mu.read_10x_mtx is used, make sure there are barcodes.tsv.gz and features.tsv.gz are available in the same folder
         Args:
             Specific modality and file_path must be provided when defining DataLoader object
             support file format: [".csv", ".tsv", ".h5ad", ".txt", ".mtx", ".h5mu", ".h5"]
@@ -30,14 +31,18 @@ class DataLoader:
             if ".csv" in self.file_path:
                 adata = sc.read_csv(self.file_path)
             elif ".tsv" in self.file_path:
-                adata = sc.read_csv(self.file_path, sep="\t")
+                adata = sc.read(self.file_path, delimiter='\t').T
             elif ".h5ad" in self.file_path:
                 adata = sc.read_h5ad(self.file_path)  
             elif ".txt" in self.file_path:
                 adata = sc.read_text(self.file_path)
             elif ".mtx" in self.file_path:
-                mudata = mu.read_10x_mtx(self.file_path) 
-                adata = mudata[self.modality]
+                if self.modality in ["rna", "atac"]:
+                    path = os.path.dirname(self.file_path)
+                    mudata = mu.read_10x_mtx(path, extended=True) 
+                    adata = mudata[self.modality]
+                else:
+                    adata = sc.read_mtx(self.file_path)
             elif ".h5mu" in self.file_path:
                 mudata = mu.read_h5mu(self.file_path)
                 adata = mudata[self.modality]
@@ -69,7 +74,8 @@ class DataLoader:
             elif ".h5" in self.file_path:
                 mudata =mu.read_10x_h5(self.file_path)
             elif ".mtx" in self.file_path:
-                mudata = mu.read_10x_mtx(self.file_path)
+                path = os.path.dirname(self.file_path)
+                mudata = mu.read_10x_mtx(path, extended=True) 
             else:
                 raise ValueError("Could not read the file. Only support file format .h5mu, .h5, .mtx.")
         else:
@@ -90,10 +96,14 @@ class DataLoader:
         """
         if len(list_modality) != len(list_anndata):
             raise ValueError("Length of list_modality and list_anndata must be equal!")
-
-        data_dict = {}
-        for i, mod in enumerate(list_modality):
-            data_dict[mod] = list_anndata[i]
+        else:
+            data_dict = {}
+            for i, mod in enumerate(list_modality):
+                data_dict[mod] = list_anndata[i]
+                try:
+                    list_anndata[i].X = np.array(list_anndata[i].X.todense())
+                except:
+                    pass
 
         self.data = mu.MuData(data_dict)
         mu.pp.intersect_obs(self.data)   # Make sure number of cells are the same for all modalities
