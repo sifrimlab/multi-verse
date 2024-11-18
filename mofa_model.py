@@ -3,6 +3,7 @@ import pandas as pd
 import scanpy as sc
 import anndata as ad
 import muon as mu
+import os
 
 mu.set_options(display_style = "html", display_html_expand = 0b000)
 
@@ -52,15 +53,14 @@ class MOFA_Model:
         else:
             print(f"File not found: {filepath}")
 
-    def umap(self, random_state=1, filename=None):
+    def umap(self, random_state=1, filename=None, use_representation="X_mofa", color_type="cell_type"):
         """Generate UMAP visualization."""
         print("Generating UMAP with MOFA embeddings")
-        sc.pp.neighbors(self.dataset, use_rep="X_mofa")
+        sc.pp.neighbors(self.dataset, use_rep=use_representation)
         sc.tl.umap(self.dataset, random_state=random_state)
-        self.dataset.obsm["X_mofa_umap"] = self.dataset.obsm["X_umap"]
 
         # Plotting UMAP and saving the figure
         if not filename:
             filename = os.path.join(self.data_dir, f"mofa_{self.name}_umap_plot.png")
-        mu.pl.embedding(self.dataset, basis="X_mofa_umap", color=["rna:celltype", "atac:celltype"], save=filename)
+        sc.pl.umap(fuse ,color=color_type, save=filename)
         print(f"UMAP plot saved as {filename}")
