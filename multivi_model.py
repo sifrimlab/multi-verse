@@ -15,13 +15,14 @@ import pandas as pd
 class MultiVI_Model:
     """MultiVI Model implementation."""
     
-    def __init__(self, data_dir, dataset, adata_rna, adata_atac, join='outer', axis=1, label='modality', latent_key):
+    def __init__(self, data_dir, dataset, adata_rna, adata_atac, join='outer', axis=1, label='modality', latent_key, name="datasetName"):
         print("Initializing MultiVI Model")
         self.data_dir = data_dir
         self.dataset = dataset
         self.adata_rna = adata_rna 
         self.adata_atac = adata_atac
         self.latent_key = latent_key
+        self.name = name
 
         self.adata_mvi = ad.concat([self.adata_rna, self.adata_atac], join=join, axis=axis, label=label)
 
@@ -45,9 +46,9 @@ class MultiVI_Model:
         print("Saving latent data")
         try:
             self.adata_mvi.obsm[self.latent_key] = self.model.get_latent_representation()
-            self.adata_mvi.write(data_dir+f"multivi_{self.dataset}.txt")
+            self.adata_mvi.write(data_dir+f"multivi_{self.name}.txt")
 
-            print(f"MultiVI model for dataset {self.dataset} was saved as multivi_{self.dataset}.txt")
+            print(f"MultiVI model for dataset {self.name} was saved as multivi_{self.dataset}.txt")
         except Exception as e:
             print(f"Error saving latent data: {e}")
 
@@ -55,14 +56,14 @@ class MultiVI_Model:
     def load_latent(self):
         """Load latent data from saved files."""
 
-    def umap(self, min_dist=0.2, color_type="cell_type", filename = f"multivi_{self.dataset}_umap_plot.png"):
+    def umap(self, min_dist=0.2, color_type="cell_type", filename = f"multivi_{self.name}_umap_plot.png"):
         """Generate UMAP visualization."""
         print("Generating UMAP plot")
         try:
             sc.pp.neighbors(self.adata_mvi, use_rep=self.latent_key)
             sc.tl.umap(self.adata_mvi, min_dist=min_dist)
             sc.pl.umap(self.adata_mvi, color=color_type, save=filename)
-            print(f"A UMAP plot for MultiVI model with dataset {self.dataset} was succesfully generated and saved as {filename}")
+            print(f"A UMAP plot for MultiVI model with dataset {self.name} was succesfully generated and saved as {filename}")
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")

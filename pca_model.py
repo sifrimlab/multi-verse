@@ -10,13 +10,14 @@ import os
 class PCA_Model:
     """PCA implementation"""
     
-    def __init__(self, data_dir, dataset, n_components=20):
+    def __init__(self, data_dir, dataset, n_components=20, name="datasetName"):
         """Initialize the PCA model with the specified dataset."""
 
         print("Initializing PCA Model")
         self.data_dir = data_dir
         self.dataset = dataset
         self.n_components = n_components
+        self.name = name
 
         # Ensure observations intersect between modalities
         self._prepare_dataset()
@@ -42,7 +43,7 @@ class PCA_Model:
     def save_latent(self):
         """Save the PCA latent representations."""
         print("Saving PCA latent embeddings")
-        output_path = os.path.join(self.data_dir, f"pca_{self.dataset}.h5ad")
+        output_path = os.path.join(self.data_dir, f"pca_{self.name}.h5ad")
         self.dataset.write(output_path)
         print(f"Latent data saved to {output_path}")
 
@@ -66,6 +67,6 @@ class PCA_Model:
 
         # Plotting UMAP and saving the figure
         if not filename:
-            filename = os.path.join(self.data_dir, f"pca_{self.dataset}_umap_plot.png")
+            filename = os.path.join(self.data_dir, f"pca_{self.name}_umap_plot.png")
         sc.pl.umap(self.dataset['rna'], color=["celltype"], save=filename)
         print(f"UMAP plot saved as {filename}")

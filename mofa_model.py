@@ -9,10 +9,11 @@ mu.set_options(display_style = "html", display_html_expand = 0b000)
 class MOFA_Model:
     """MOFA+ Model implementation"""
     
-    def __init__(self, data_dir, dataset):
+    def __init__(self, data_dir, dataset, name="datasetName"):
         self.data_dir = data_dir
         self.dataset = dataset
-
+        self.name = name
+        
         print("Initializing MOFA+ Model")
 
         
@@ -20,7 +21,7 @@ class MOFA_Model:
         print("Training MOFA+ Model")
         print("Training MOFA+ Model")
         if not outfile:
-            outfile = os.path.join(self.data_dir, f"mofa_{self.dataset}.hdf5")
+            outfile = os.path.join(self.data_dir, f"mofa_{self.name}.hdf5")
         try:
             mu.tl.mofa(self.dataset, n_factors=n_factors, outfile=outfile, gpu_mode=gpu_mode)
             print(f"Model saved at: {outfile}")
@@ -33,8 +34,8 @@ class MOFA_Model:
         Save the latent space embeddings from the trained MOFA model.
         """
         print("Saving latent embeddings")
-        self.dataset.obsm[f'X_mofa_{self.dataset}'] = self.dataset.obsm.get('X_mofa')
-        self.dataset.varm[f'LFs_mofa_{self.dataset}'] = self.dataset.varm.get('LFs')
+        self.dataset.obsm[f'X_mofa_{self.name}'] = self.dataset.obsm.get('X_mofa')
+        self.dataset.varm[f'LFs_mofa_{self.name}'] = self.dataset.varm.get('LFs')
 
         # Save the updated dataset to a file
         output_path = os.path.join(self.data_dir, f"mofa_{self.dataset}.h5ad")
@@ -60,6 +61,6 @@ class MOFA_Model:
 
         # Plotting UMAP and saving the figure
         if not filename:
-            filename = os.path.join(self.data_dir, f"mofa_{self.dataset}_umap_plot.png")
+            filename = os.path.join(self.data_dir, f"mofa_{self.name}_umap_plot.png")
         mu.pl.embedding(self.dataset, basis="X_mofa_umap", color=["rna:celltype", "atac:celltype"], save=filename)
         print(f"UMAP plot saved as {filename}")

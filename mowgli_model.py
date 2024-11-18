@@ -39,14 +39,15 @@ class Mowgli_Model:
     
     """
     
-    def __init__(self, data_dir, dataset, latent_dimensions, device, learning_rate):
+    def __init__(self, data_dir, dataset, latent_dimensions, device, learning_rate, name="datasetName"):
         print("Initializing Mowgli Model")
         self.data_dir = data_dir
         self.dataset = dataset
         self.latent_dimensions = latent_dimensions
         self.device = device
         self.learning_rate = learning_rate
-        
+        self.name = name
+
         # Create the model instance during initialization
         self.model = mowgli.models.MowgliModel(latent_dim=self.latent_dimensions)
         
@@ -81,7 +82,7 @@ class Mowgli_Model:
         print("Saving latent data")
         try:
             np.save(
-                os.path.join(self.output_dir, f"mowgli_{self.dataset}.npy"),
+                os.path.join(self.output_dir, f"mowgli_{self.name}.npy"),
                 {
                     "W": self.dataset.obsm["W_OT"],
                     **{"H_" + mod: self.dataset[mod].uns["H_OT"] for mod in self.dataset.mod},
@@ -98,7 +99,7 @@ class Mowgli_Model:
         """Load latent data from saved files."""
         print("Loading latent data")
         try:
-            file_path = os.path.join(self.output_dir, f"mowgli_{self.dataset}.npy")
+            file_path = os.path.join(self.output_dir, f"mowgli_{self.name}.npy")
             mowgli_data = np.load(file_path, allow_pickle=True).item()
             self.dataset.obsm["W_mowgli"] = mowgli_data["W"]
             self.dataset.uns = {}
@@ -108,7 +109,7 @@ class Mowgli_Model:
         except Exception as e:
             print(f"Error loading latent data: {e}")
 
-    def umap(self, num_neighbors=15, umap_size=20, umap_alpha=0.8, filename=f'mowgli_{self.dataset}_umap_plot.png'):
+    def umap(self, num_neighbors=15, umap_size=20, umap_alpha=0.8, filename=f'mowgli_{self.name}_umap_plot.png'):
         """Generate UMAP visualization."""
         print("Generating UMAP plot")
         try:
@@ -120,7 +121,7 @@ class Mowgli_Model:
             plt.savefig(os.path.join(self.output_dir, filename))
             plt.close()
             
-            print(f"A UMAP plot for Mowgli model with dataset {self.dataset} was succesfully generated and saved as {filename}")
+            print(f"A UMAP plot for Mowgli model with dataset {self.name} was succesfully generated and saved as {filename}")
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")
