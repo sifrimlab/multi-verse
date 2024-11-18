@@ -1,0 +1,10 @@
+name: myenv
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - pytorch
+  - scvi-tools
+  - muon==0.1.7
+  - ipykernel
+  - mofapy2
