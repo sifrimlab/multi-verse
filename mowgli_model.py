@@ -54,6 +54,20 @@ class Mowgli_Model:
         # Ensure output directory exists
         self.output_dir = os.path.join(self.data_dir, "mowgli_output")
         os.makedirs(self.output_dir, exist_ok=True)
+        
+    def to(self, device='cpu'):
+        """
+        Method to set GPU or CPU mode for MOFA+.
+        """
+        try:
+            print(f"Moving Mowgli model to {device}")
+            torch_device = torch.device(device)
+            self.model.to_device(device)
+            print(f"Mowgli model successfully moved to {device}")
+        except Exception as e:
+            print(f"Invalid device '{device}' specified. Use 'cpu' or 'gpu'.")
+            raise
+
 
     def train(self):
         """Train the Mowgli model."""

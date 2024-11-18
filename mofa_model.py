@@ -18,12 +18,18 @@ class MOFA_Model:
 
         print("Initializing MOFA+ Model")
 
-    def to(self, gpu_mode=True):
+    def to(self, device='cpu'):
         """
-        Method to set GPU or CPU mode.
+        Method to set GPU or CPU mode for MOFA+.
         """
-        self.gpu_mode = gpu_mode
-        device = "GPU" if gpu_mode else "CPU"
+        if device=='cpu':
+            self.gpu_mode = False
+        if device=='gpu' 
+            self.gpu_mode = True
+        else:
+            print(f"Invalid device '{device}' specified. Use 'cpu' or 'gpu'.")
+            return  # Exit early if the device is invalid
+        
         print(f"Switching to {device} mode")
 
     def train(self, n_factors=20, outfile=None):

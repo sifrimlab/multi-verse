@@ -18,10 +18,22 @@ class PCA_Model:
         self.dataset = dataset
         self.n_components = n_components
         self.name = name
+        self.gpu_mode = False  # Default to CPU mode
+
 
         # Ensure observations intersect between modalities
         self._prepare_dataset()
         self.pca = PCA(n_components=self.n_components)
+
+    def to(self, device='cpu'):
+        """
+        Method to set GPU or CPU mode for MOFA+.
+        """
+        if device != 'cpu':
+            print("PCA does not support GPU. Using CPU instead.")
+        else:
+            print("Using CPU mode for PCA.")
+        self.gpu_mode = False
     
     def train(self):
         """Perform PCA on the RNA modality data."""

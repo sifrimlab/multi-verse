@@ -32,7 +32,22 @@ class MultiVI_Model:
             n_genes=(self.adata_mvi.var["modality"] == "0").sum(),
             n_regions=(self.adata_mvi.var["modality"] == "1").sum(),
             )
+            
+    def to(self, device='cpu'):
+        """
+        Method to set GPU or CPU mode for MOFA+.
+        """
+        # Convert 'gpu' to 'cuda:0'
+        if device == 'gpu':
+            device = 'cuda:0'
 
+        try:
+            print(f"Moving MultiVI model to {device}")
+            self.model.to_device(device)
+            print(f"Model successfully moved to {device}")
+        except Exception as e:
+            print(f"Invalid device '{device}' specified. Use 'cpu' or 'gpu'.")
+        
     def train(self):
         print("Training MultiVI Model")
         try:
