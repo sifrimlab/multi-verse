@@ -15,7 +15,7 @@ import pandas as pd
 class MultiVI_Model:
     """MultiVI Model implementation."""
     
-    def __init__(self, data_dir, dataset, adata_rna, adata_atac, join='outer', axis=1, label='modality', latent_key, name="datasetName"):
+    def __init__(self, data_dir, dataset, adata_rna, adata_atac, latent_key, join='outer', axis=1, label='modality', name="datasetName"):
         print("Initializing MultiVI Model")
         self.data_dir = data_dir
         self.dataset = dataset
@@ -61,7 +61,7 @@ class MultiVI_Model:
         print("Saving latent data")
         try:
             self.adata_mvi.obsm[self.latent_key] = self.model.get_latent_representation()
-            self.adata_mvi.write(data_dir+f"multivi_{self.name}.txt")
+            self.adata_mvi.write(self.data_dir+f"multivi_{self.name}.txt")
 
             print(f"MultiVI model for dataset {self.name} was saved as multivi_{self.dataset}.txt")
         except Exception as e:
@@ -71,13 +71,13 @@ class MultiVI_Model:
     def load_latent(self):
         """Load latent data from saved files."""
 
-    def umap(self, min_dist=0.2, color_type="cell_type", filename = f"multivi_{self.name}_umap_plot.png"):
+    def umap(self, filename, min_dist=0.2, color_type="cell_type"):
         """Generate UMAP visualization."""
         print("Generating UMAP plot")
         try:
             sc.pp.neighbors(self.adata_mvi, use_rep=self.latent_key)
             sc.tl.umap(self.adata_mvi, min_dist=min_dist)
-            sc.pl.umap(self.adata_mvi, color=color_type, save=filename)
+            sc.pl.umap(self.adata_mvi, color=color_type, save=f"multivi_{filename}_umap_plot.png")
             print(f"A UMAP plot for MultiVI model with dataset {self.name} was succesfully generated and saved as {filename}")
 
         except Exception as e:
