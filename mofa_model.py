@@ -10,21 +10,31 @@ mu.set_options(display_style = "html", display_html_expand = 0b000)
 class MOFA_Model:
     """MOFA+ Model implementation"""
     
-    def __init__(self, data_dir, dataset, name="datasetName"):
+    def __init__(self, data_dir, dataset, name="datasetName", gpu_mode=True):
         self.data_dir = data_dir
         self.dataset = dataset
         self.name = name
-        
+        self.gpu_mode = gpu_mode
+
         print("Initializing MOFA+ Model")
 
-        
-    def train(self, n_factors=20, outfile=None, gpu_mode=True):
-        print("Training MOFA+ Model")
+    def to(self, gpu_mode=True):
+        """
+        Method to set GPU or CPU mode.
+        """
+        self.gpu_mode = gpu_mode
+        device = "GPU" if gpu_mode else "CPU"
+        print(f"Switching to {device} mode")
+
+    def train(self, n_factors=20, outfile=None):
+        """
+        Train the MOFA model.
+        """
         print("Training MOFA+ Model")
         if not outfile:
             outfile = os.path.join(self.data_dir, f"mofa_{self.name}.hdf5")
         try:
-            mu.tl.mofa(self.dataset, n_factors=n_factors, outfile=outfile, gpu_mode=gpu_mode)
+            mu.tl.mofa(self.dataset, n_factors=n_factors, outfile=outfile, gpu_mode=self.gpu_mode)
             print(f"Model saved at: {outfile}")
         except Exception as e:
             print(f"Error during training: {e}")
@@ -64,3 +74,4 @@ class MOFA_Model:
             filename = os.path.join(self.data_dir, f"mofa_{self.name}_umap_plot.png")
         sc.pl.umap(fuse ,color=color_type, save=filename)
         print(f"UMAP plot saved as {filename}")
+
