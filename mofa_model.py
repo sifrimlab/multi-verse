@@ -77,7 +77,7 @@ class MOFA_Model:
 
         # Plotting UMAP and saving the figure
         if not filename:
-            filename = os.path.join(self.data_dir, f"mofa_{self.name}_umap_plot.png")
+            filename = os.path.join(self.data_dir, f"mofa_{self.name}_umap_plot.png") # something off with the filename - gives errors
         sc.pl.umap(self.dataset, color=color_type, save=filename)
         print(f"UMAP plot saved as {filename}")
 
