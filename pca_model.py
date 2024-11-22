@@ -1,9 +1,7 @@
 import numpy as np
-import pandas as pd
 import scanpy as sc
 import anndata as ad
 import muon as mu
-import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import os
 
@@ -20,28 +18,7 @@ class PCA_Model:
         self.name = name
         self.gpu_mode = False  # Default to CPU mode
 
-
-        # Ensure observations intersect between modalities
-        # self._prepare_dataset()
         self.pca = PCA(n_components=self.n_components)
-    
-    # def _prepare_dataset(self):
-    #     """
-    #     Ensure modalities share the same observations.
-    #     This step guarantees that all modalities have the same set of observations.
-    #     """
-    #     print("Ensuring observations are consistent across modalities")
-    #     common_obs = None
-    #     for mod in self.dataset.mod.keys():
-    #         if common_obs is None:
-    #             common_obs = set(self.dataset[mod].obs_names)
-    #         else:
-    #             common_obs &= set(self.dataset[mod].obs_names)
-        
-    #     # Filter each modality for the common observations
-    #     for mod in self.dataset.mod.keys():
-    #         self.dataset[mod] = self.dataset[mod][list(common_obs)]
-    #     print(f"Number of shared observations: {len(common_obs)}")
 
     def to(self, device='cpu'):
         """
