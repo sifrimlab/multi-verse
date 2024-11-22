@@ -123,19 +123,23 @@ class Mowgli_Model:
         except Exception as e:
             print(f"Error loading latent data: {e}")
 
-    def umap(self, num_neighbors=15, umap_size=20, umap_alpha=0.8, filename=f'mowgli_{self.name}_umap_plot.png'):
+    def umap(self, num_neighbors=15, umap_size=20, umap_alpha=0.8, filename=None):
         """Generate UMAP visualization."""
         print("Generating UMAP plot")
         try:
             sc.pp.neighbors(self.dataset, use_rep="X_mowgli", n_neighbors=num_neighbors)
             sc.tl.umap(self.dataset)
             sc.pl.umap(self.dataset, size=umap_size, alpha=umap_alpha)
-            
+        
+            # If filename is not provided, use default that includes self.name
+            if filename is None:
+                filename = f"mowgli_{self.name}_umap_plot.png"
+        
             # Save the plot
             plt.savefig(os.path.join(self.output_dir, filename))
             plt.close()
-            
-            print(f"A UMAP plot for Mowgli model with dataset {self.name} was succesfully generated and saved as {filename}")
+        
+            print(f"A UMAP plot for Mowgli model with dataset {self.name} was successfully generated and saved as {filename}")
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")
