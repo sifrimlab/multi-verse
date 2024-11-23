@@ -24,11 +24,10 @@ class PCA_Model:
 
     def __init__(self, dataset):
         """Initialize the PCA model with the specified parameters."""
+        print("Initializing PCA Model")
 
         pca_params= load_config()["models"]["pca"].get("model_params")
 
-        print("Initializing PCA Model")
-        self.data_dir = pca_params.get("data_dir")
         self.dataset = dataset
         self.n_components = pca_params.get("n_components")
         self.name = pca_params.get("name")
@@ -38,7 +37,7 @@ class PCA_Model:
         self.umap_random_state = pca_params.get("umap_random_state")
         self.umap_filename = pca_params.get("umap_filename")
         self.umap_color_type = pca_params.get("umap_color_type")
-        self.output_dir = os.path.join(self.data_dir, "pca_output")
+        self.output_dir = os.path.join("outputs", "pca_output")
 
         # For demonstration, we'll assume PCA is just a placeholder here
         # self.pca = PCA(n_components=self.n_components)
@@ -117,12 +116,13 @@ class MOFA_Model:
     """MOFA+ Model implementation"""
     mu.set_options(display_style = "html", display_html_expand = 0b000)
 
-    def __init__(self, mofa_params):
+    def __init__(self, dataset):
         """Initialize the MOFA model with the specified parameters."""
+        print("Initializing MOFA+ Model")
+        
         mofa_params= load_config()["models"]["mofa"].get("model_params")
 
-        self.data_dir = mofa_params.get("data_dir")
-        self.dataset = mofa_params.get("dataset")
+        self.dataset = dataset
         self.name = mofa_params.get("datasetName")
         self.gpu_mode = mofa_params.get("gpu_mode")
         self.device = mofa_params.get("device")
@@ -132,9 +132,8 @@ class MOFA_Model:
         self.umap_random_state=mofa_params.get("umap_random_state")
         self.umap_use_representation=mofa_params.get("umap_use_representation")
         self.umap_color_type=mofa_params.get("umap_color_type")
-        self.output_dir = os.path.join(self.data_dir, "mofa_output")
+        self.output_dir = os.path.join("outputs", "mofa_output")
 
-        print("Initializing MOFA+ Model")
 
     def to(self):
         """
@@ -231,15 +230,14 @@ class MOFA_Model:
 class Mowgli_Model:
     """Mowgli model implementation."""
     
-    def __init__(self, mowgli_params):
+    def __init__(self, dataset):
         """Initialize the Mowgli model with the specified parameters."""
 
         print("Initializing Mowgli Model")
 
         mowgli_params= load_config()["models"]["mowgli"].get("model_params")
 
-        self.data_dir = mowgli_params.get("data_dir")
-        self.dataset = mowgli_params.get("dataset")
+        self.dataset = dataset
         self.name = mowgli_params.get("datasetName")
         self.device = mowgli_params.get("device")
         self.latent_dimensions = mowgli_params.get("latent_dimensions")
@@ -252,7 +250,7 @@ class Mowgli_Model:
         self.model = mowgli.models.MowgliModel(latent_dim=self.latent_dimensions)
         
         # Ensure output directory exists
-        self.output_dir = os.path.join(self.data_dir, "mowgli_output")
+        self.output_dir = os.path.join("outputs", "mowgli_output")
         os.makedirs(self.output_dir, exist_ok=True)
         
     def to(self):
@@ -348,15 +346,14 @@ class Mowgli_Model:
 class MultiVI_Model:
     """MultiVI Model implementation."""
     
-    def __init__(self, multivi_params):
+    def __init__(self, dataset):
         """Initialize the MultiVi model with the specified parameters."""
 
         print("Initializing MultiVI Model")
 
         multivi_params= load_config()["models"]["multivi"].get("model_params")
 
-        self.data_dir = multivi_params.get("data_dir")
-        self.dataset = multivi_params.get("dataset")
+        self.dataset = dataset
         self.adata_rna = multivi_params.get("adata_rna") 
         self.adata_atac = multivi_params.get("adata_atac")
         self.latent_key = multivi_params.get("latent_key")
@@ -368,7 +365,7 @@ class MultiVI_Model:
         self.umap_filename = multivi_params.get("umap_filename")
         self.umap_min_dist = multivi_params.get("umap_min_dist")
         self.umap_color_type = multivi_params.get("umap_color_type")
-        self.output_dir = os.path.join(self.data_dir, "multivi_output")
+        self.output_dir = os.path.join("outputs", "multivi_output")
 
 
         self.adata_mvi = ad.concat([self.adata_rna, self.adata_atac], 
