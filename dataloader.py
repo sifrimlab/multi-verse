@@ -4,7 +4,9 @@ import mudata as md
 import muon as mu
 import os
 import numpy as np
+from config import load_config
 from typing import List
+import json
 
 #Output type = anndata, mudata, cobolt_data_object?
 
@@ -109,6 +111,19 @@ class DataLoader:
         mu.pp.intersect_obs(self.data)   # Make sure number of cells are the same for all modalities
         return self.data
 
+    def anndata_concatenate(self, list_anndata: List[ad.AnnData] = None, list_modality: List[str] = None) -> ad.AnnData:
+        """
+        notes.....
+        """
+        mudata = self.fuse_mudata(list_anndata=list_anndata, list_modality=list_modality)
+        list_ann = []
+        for mod in list_modality:
+            list_ann.append(mudata[mod])
+
+        anndata = ad.concat(list_ann, axis="var")
+        self.data = anndata
+        return self.data
+
     def preprocessing(self) -> ad.AnnData:
         """
         Preprocessing each anndata object
@@ -143,9 +158,10 @@ class DataLoader:
 
 
 class Preprocessing:
-    def __init__(self, anndata: ad.AnnData):
+    def __init__(self, anndata: ad.AnnData, config_path: str="./config.json"):
         self.data = anndata
-
+        self.config = load_config(config_path=config_path)
+    
     def rna_preprocessing(self) -> ad.AnnData:
         """
         QC metrics for filtering obs depends on specific dataset and experimental condition.
@@ -153,24 +169,27 @@ class Preprocessing:
         Returns:
             An anndata.AnnData object (proccessed)
         """
+
+        rna_dict = self.config.get("rna_filtering")
+
         # Quality control - based on scanpy calculateQCmetrics - McCarthy et al., 2017
         self.data.var["mt"] = self.data.var_names.str.startswith("MT-")
-        sc.pp.calculate_qc_metrics(self.data, qc_vars=["mt"], inplace=True, log1p=True)
+        sc.pp.calculate_qc_metrics(self.data, qc_vars=["mt"], inplace=rna_dict.get("qc_metric_inplace"), log1p=rna_dict.get("qc_metric_log1p"))
         
         # Filtering -> threshold metrics depend on the specific dataset and experimental conditions.
-        mu.pp.filter_obs(self.data, 'n_genes_by_counts', lambda x: (x >= 500) & (x < 4500))
-        mu.pp.filter_obs(self.data, "total_counts", lambda x: x < 12000)
-        mu.pp.filter_obs(self.data, "pct_counts_mt", lambda x: x < 30)
+        mu.pp.filter_obs(self.data, 'n_genes_by_counts', lambda x: (x >= rna_dict.get("min_genes_by_counts")) & (x < rna_dict.get("max_genes_by_counts")))
+        mu.pp.filter_obs(self.data, "total_counts", lambda x: x < rna_dict.get("max_total_counts_per_cell"))
+        mu.pp.filter_obs(self.data, "pct_counts_mt", lambda x: x < rna_dict.get("max_pct_counts_mt"))
 
         # Filter genes by keeping only those that are expressed in at least 10 cells.
-        mu.pp.filter_var(self.data, "n_cells_by_counts", lambda x: x >= 10)        
+        mu.pp.filter_var(self.data, "n_cells_by_counts", lambda x: x >= rna_dict.get("min_cells_by_counts"))        
         
         # Normalisation
-        sc.pp.normalize_total(self.data, target_sum=1e4)
+        sc.pp.normalize_total(self.data, target_sum=rna_dict.get("normalization_target_sum"))
         sc.pp.log1p(self.data)
 
         # Feature selection
-        sc.pp.highly_variable_genes(self.data, n_top_genes=2000, subset=True,flavor="seurat")
+        sc.pp.highly_variable_genes(self.data, n_top_genes=rna_dict.get("n_top_genes"), subset=True,flavor="seurat")
 
         return self.data
 
@@ -181,23 +200,26 @@ class Preprocessing:
         Returns:
             An anndata.AnnData object (proccessed)
         """
-        # Quality control
-        sc.pp.calculate_qc_metrics(self.data, percent_top=None, inplace=True, log1p=False)
 
-        # Filter peaks based on number of cells where they are present.
-        mu.pp.filter_var(self.data, "n_cells_by_counts", lambda x: x < 4000)
-        mu.pp.filter_var(self.data, "total_counts", lambda x: x < 1e4)
+        atac_dict = self.config.get("atac_filtering")
+
+        # Quality control
+        sc.pp.calculate_qc_metrics(self.data, percent_top=None, inplace=atac_dict.get("qc_metric_inplace"), log1p=atac_dict.get("qc_metric_log1p"))
 
         # Filter cells based on QC metrics.
-        mu.pp.filter_obs(self.data, "total_counts", lambda x: (x >= 1_000) & (x <= 50_000))
-        mu.pp.filter_obs(self.data, "n_genes_by_counts", lambda x: (x >= 1000) & (x <= 15000))
+        mu.pp.filter_obs(self.data, "n_genes_by_counts", lambda x: (x >= atac_dict.get("min_peaks_by_counts")) & (x <= atac_dict.get("max_peaks_by_counts")))
+        mu.pp.filter_obs(self.data, "total_counts", lambda x: (x >= atac_dict.get("min_total_counts_per_cell")) & (x <= atac_dict.get("max_total_counts_per_cell")))
+        
+        # Filter peaks based on number of cells where they are present.
+        mu.pp.filter_var(self.data, "n_cells_by_counts", lambda x: x < atac_dict.get("max_cells_by_counts"))
+        mu.pp.filter_var(self.data, "total_counts", lambda x: x < atac_dict.get("max_total_counts_by_gene"))
 
         # Perform per-cell normalization.
-        sc.pp.normalize_total(self.data, target_sum=1e4)
+        sc.pp.normalize_total(self.data, target_sum=atac_dict.get("normalization_target_sum"))
         sc.pp.log1p(self.data)
 
         # Feature selection
-        sc.pp.highly_variable_genes(self.data, n_top_genes=15000, subset=True,flavor="seurat")
+        sc.pp.highly_variable_genes(self.data, n_top_genes=atac_dict.get("n_top_peaks"), subset=True,flavor="seurat")
 
         return self.data
 
@@ -206,12 +228,17 @@ class Preprocessing:
         Returns:
             An anndata.AnnData object (proccessed)
         """
+
+        adt_dict = self.config.get("adt_filtering")
+
         # Remove the "total" feature.
         self.data = self.data[:, 1:]
         # Make index of proteins compatible with 10X multiome.
         self.data.obs.index += "-1"
+
         # Perform per-cell normalization.
-        mu.prot.pp.clr(self.data)
+        if adt_dict.get("per_cell_normalization"):
+            mu.prot.pp.clr(self.data)
         self.data.var["highly_variable"] = True
 
         return self.data
