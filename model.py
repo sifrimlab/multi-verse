@@ -16,7 +16,7 @@ import os
 import torch
 import scvi
 
-from config import load_config
+from config import load_config 
 
 class ModelFactory:
     def __init__(self, config_path="./config.json"):
@@ -31,60 +31,75 @@ class ModelFactory:
         Create and return the appropriate model instance based on config.
 
         example config file:
-            {
-                "model_PCA": True
-                "model_params_PCA": {
-                    "data_dir": "path/to/data",
-                    "dataset": "dataset_name",
-                    "n_components": 20,
-                    "name": "example_dataset"
-                }
-            }
-            {
-                "model_MOFA": True
-                "model_params_MOFA": {
-                    "data_dir": "path/to/data",
-                    "dataset": "dataset_name",
-                    "n_components": 20,
-                    "name": "example_dataset"
-                }
-            }
+                    {
+                    "models": {
+                        "pca": {
+                        "model_params": {
+                            "is_PCA": true,
+                            "data_dir": "path/to/data",
+                            "dataset": "dataset_name1",
+                            "n_components": 20,
+                            "name": "example_dataset1"
+                        }
+                        },
+                        "mofa": {
+                        "model_params": {
+                            "is_MOFA": true,
+                            "data_dir": "path/to/data",
+                            "dataset": "dataset_name2",
+                            "n_components": 25,
+                            "name": "example_dataset2"
+                        }}}}
+
         """
-        model_type = self.config.get("model_type", "").lower()
-        model_params = self.config.get("model_params", {})
+        
+        models = []
 
-        if model_type == "pca":
-            return PCA_Model(**model_params)
-        elif model_type == "mofa":
-            return MOFA_Model(**model_params)
-        elif model_type == "mowgli":
-            return Mowgli_Model(**model_params)
-        elif model_type == "multivi":
-            return MultiVI_Model(**model_params)
-        else:
-            raise ValueError(f"Unsupported model type: {model_type}")
+        # Iterate through the models defined in the config
+        for model_name, model_config in self.config.get("models", {}).items():
+            model_params = model_config.get("model_params", {})
+            
+            # Check the model type and instantiate the corresponding model
+            if "is_PCA" in model_params and model_params.get("is_PCA"):
+                models.append(PCA_Model(model_params))
+            elif "is_MOFA" in model_params and model_params.get("is_MOFA"):
+                models.append(MOFA_Model(model_params))
+            elif "is_MOWGLI" in model_params and model_params.get("is_MOWGLI"):
+                models.append(Mowgli_Model(model_params))
+            elif "is_MULTIVI" in model_params and model_params.get("is_MULTIVI"):
+                models.append(MultiVI_Model(model_params))
+            else:
+                raise ValueError(f"Unsupported model type or missing configuration for: {model_name}")
 
+        return models
+    
 
 class PCA_Model:
     """PCA implementation"""
-    
-    def __init__(self, data_dir, dataset, n_components=20, name="datasetName"):
-        """Initialize the PCA model with the specified dataset."""
 
+    def __init__(self, pca_params):
+        """Initialize the PCA model with the specified parameters."""
         print("Initializing PCA Model")
-        self.data_dir = data_dir
-        self.dataset = dataset
-        self.n_components = n_components
-        self.name = name
+        self.data_dir = pca_params.get("data_dir")
+        self.dataset = pca_params.get("dataset")
+        self.n_components = pca_params.get("n_components")
+        self.name = pca_params.get("name")
         self.gpu_mode = False  # Default to CPU mode
+        self.device = pca_params.get("device")
+        self.latent_filepath = pca_params.get("latent_filepath")
+        self.umap_random_state = pca_params.get("umap_random_state")
+        self.umap_filename = pca_params.get("umap_filename")
+        self.umap_color_type = pca_params.get("umap_color_type")
 
-        self.pca = PCA(n_components=self.n_components)
+        # For demonstration, we'll assume PCA is just a placeholder here
+        # self.pca = PCA(n_components=self.n_components)
+        print(f"PCA initialized with {self.dataset}, {self.n_components} components.")
 
-    def to(self, device='cpu'):
+    def to(self):
         """
         Method to set GPU or CPU mode.
         """
-        if device != 'cpu':
+        if  self.device != 'cpu':
             print("PCA does not support GPU. Using CPU instead.")
         else:
             print("Using CPU mode for PCA.")
@@ -117,16 +132,16 @@ class PCA_Model:
         self.dataset.write(output_path)
         print(f"Latent data saved to {output_path}")
 
-    def load_latent(self, filepath):
+    def load_latent(self):
         """Load latent data from a saved file."""
-        print(f"Loading latent data from {filepath}")
-        if os.path.exists(filepath):
-            self.dataset = mu.read(filepath)
+        print(f"Loading latent data from {self.latent_filepath}")
+        if os.path.exists(self.latent_filepath):
+            self.dataset = mu.read(self.latent_filepath)
             print("Latent data loaded successfully.")
         else:
-            print(f"File not found: {filepath}")
+            print(f"File not found: {self.latent_filepath}")
 
-    def umap(self, random_state=1, filename=None, color_type='celltype'):
+    def umap(self):
         """Generate UMAP visualization using PCA embeddings for all modalities."""
         print("Generating UMAP with PCA embeddings for all modalities")
         
@@ -135,55 +150,63 @@ class PCA_Model:
             
             # Use the PCA latent representation for UMAP
             sc.pp.neighbors(self.dataset[modality], use_rep="X_pca")
-            sc.tl.umap(self.dataset[modality], random_state=random_state)
+            sc.tl.umap(self.dataset[modality], random_state=self.umap_random_state)
             
             # Save UMAP representation in `obsm`
             self.dataset[modality].obsm["X_pca_umap"] = self.dataset[modality].obsm["X_umap"]
 
             # Plotting UMAP and saving the figure
-            if not filename:
-                filename = os.path.join(self.data_dir, f"pca_{modality}_umap_plot.png")
-            sc.pl.umap(self.dataset[modality], color=color_type, save=filename)
-            print(f"UMAP plot for {modality} saved as {filename}")
+            if not self.umap_filename:
+                self.umap_filename = os.path.join(self.data_dir, f"pca_{modality}_umap_plot.png")
+            sc.pl.umap(self.dataset[modality], color=self.umap_color_type, save=self.umap_filename)
+            print(f"UMAP plot for {modality} saved as {self.umap_filename}")
 
 
 class MOFA_Model:
     """MOFA+ Model implementation"""
     mu.set_options(display_style = "html", display_html_expand = 0b000)
 
-    
-    def __init__(self, data_dir, dataset, name="datasetName", gpu_mode=True):
-        self.data_dir = data_dir
-        self.dataset = dataset
-        self.name = name
-        self.gpu_mode = gpu_mode
+    def __init__(self, mofa_params):
+        self.data_dir = mofa_params.get("data_dir")
+        self.dataset = mofa_params.get("dataset")
+        self.name = mofa_params.get("name")
+        self.gpu_mode = mofa_params.get("gpu_mode")
+        self.device = mofa_params.get("device")
+        self.n_factors = mofa_params.get("n_factors")
+        self.outfilepath = mofa_params.get("outfilepath")
+        self.latent_filepath = mofa_params.get("latent_filepath")
+        self.umap_random_state=mofa_params.get("umap_random_state")
+        self.umap_filename=mofa_params.get("umap_filename") 
+        self.umap_use_representation=mofa_params.get("umap_use_representation")
+        self.umap_color_type=mofa_params.get("umap_color_type")
 
         print("Initializing MOFA+ Model")
 
-    def to(self, device='cpu'):
+    def to(self):
         """
         Method to set GPU or CPU mode for MOFA+.
         """
-        if device=='cpu':
+        if self.device=='cpu':
             self.gpu_mode = False
-        if device=='gpu':
+        if self.device=='gpu':
             self.gpu_mode = True
         else:
-            print(f"Invalid device '{device}' specified. Use 'cpu' or 'gpu'.")
+            print(f"Invalid device '{self.device}' specified. Use 'cpu' or 'gpu'.")
             return  # Exit early if the device is invalid
         
-        print(f"Switching to {device} mode")
+        print(f"Switching to {self.device} mode")
 
-    def train(self, n_factors=20, outfile=None):
+    def train(self):
         """
         Train the MOFA model.
         """
         print("Training MOFA+ Model")
-        if not outfile:
-            outfile = os.path.join(self.data_dir, f"mofa_{self.name}.hdf5")
+        if not self.outfilepath:
+            self.outfilepath = os.path.join(self.data_dir, f"mofa_{self.name}.hdf5")
         try:
-            mu.tl.mofa(self.dataset, n_factors=n_factors, outfile=outfile, gpu_mode=self.gpu_mode)
-            print(f"Model saved at: {outfile}")
+            mu.tl.mofa(self.dataset, n_factors=self.n_factors, 
+                       outfile=self.outfilepath, gpu_mode=self.gpu_mode)
+            print(f"Model saved at: {self.outfilepath}")
         except Exception as e:
             print(f"Error during training: {e}")
             raise
@@ -202,26 +225,26 @@ class MOFA_Model:
 
         print(f"Latent data saved to {output_path}")
 
-    def load_latent(self, filepath):
+    def load_latent(self):
         """Load latent data from saved files."""
-        print(f"Loading latent data from {filepath}")
-        if os.path.exists(filepath):
-            self.dataset = mu.read(filepath)
+        print(f"Loading latent data from {self.latent_filepath}")
+        if os.path.exists(self.latent_filepath):
+            self.dataset = mu.read(self.latent_filepath)
             print("Latent data loaded successfully.")
         else:
-            print(f"File not found: {filepath}")
+            print(f"File not found: {self.latent_filepath}")
 
-    def umap(self, random_state=1, filename=None, use_representation="X_mofa", color_type="cell_type"):
+    def umap(self):
         """Generate UMAP visualization."""
         print("Generating UMAP with MOFA embeddings")
-        sc.pp.neighbors(self.dataset, use_rep=use_representation)
-        sc.tl.umap(self.dataset, random_state=random_state)
+        sc.pp.neighbors(self.dataset, use_rep=self.umap_use_representation)
+        sc.tl.umap(self.dataset, random_state=self.umap_random_state)
 
         # Plotting UMAP and saving the figure
-        if not filename:
-            filename = os.path.join(self.data_dir, f"mofa_{self.name}_umap_plot.png") # something off with the filename - gives errors
-        sc.pl.umap(self.dataset, color=color_type, save=filename)
-        print(f"UMAP plot saved as {filename}")
+        if not self.umap_filename:
+            self.umap_filename = os.path.join(self.data_dir, f"mofa_{self.name}_umap_plot.png") # something off with the filename - gives errors
+        sc.pl.umap(self.dataset, color=self.umap_color_type, save=self.umap_filename)
+        print(f"UMAP plot saved as {self.umap_filename}")
 
 
 class Mowgli_Model:
