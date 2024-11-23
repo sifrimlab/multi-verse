@@ -16,27 +16,53 @@ import os
 import torch
 import scvi
 
-# class BaseModel(nn.Module):
-#     def __init__(self, config):
-#         super(BaseModel, self).__init__()
-#         self.model = self._initialize_model(config)
+from config import load_config
 
-#     def _initialize_model(self, config):
-#         # Initialize a model from needed library based on config
-#         return
+class ModelFactory:
+    def __init__(self, config_path="./config.json"):
+        """
+        Initialize the ModelFactory with the given config.
+        Config should specify model parameters and type.
+        """
+        self.config = load_config(config_path=config_path)
 
-#     def forward(self, x):
-#         return self.model(x)
+    def get_model(self):
+        """
+        Create and return the appropriate model instance based on config.
 
+        example config file:
+            {
+                "model_PCA": True
+                "model_params_PCA": {
+                    "data_dir": "path/to/data",
+                    "dataset": "dataset_name",
+                    "n_components": 20,
+                    "name": "example_dataset"
+                }
+            }
+            {
+                "model_MOFA": True
+                "model_params_MOFA": {
+                    "data_dir": "path/to/data",
+                    "dataset": "dataset_name",
+                    "n_components": 20,
+                    "name": "example_dataset"
+                }
+            }
+        """
+        model_type = self.config.get("model_type", "").lower()
+        model_params = self.config.get("model_params", {})
 
-# class ModelFactory:
-#     def __init__(self, config):
-#         self.config = config
-
-#     def get_model(self):
-#         return BaseModel(self.config)
-
-
+        if model_type == "pca":
+            return PCA_Model(**model_params)
+        elif model_type == "mofa":
+            return MOFA_Model(**model_params)
+        elif model_type == "mowgli":
+            return Mowgli_Model(**model_params)
+        elif model_type == "multivi":
+            return MultiVI_Model(**model_params)
+        else:
+            raise ValueError(f"Unsupported model type: {model_type}")
 
 
 class PCA_Model:
@@ -56,7 +82,7 @@ class PCA_Model:
 
     def to(self, device='cpu'):
         """
-        Method to set GPU or CPU mode for MOFA+.
+        Method to set GPU or CPU mode.
         """
         if device != 'cpu':
             print("PCA does not support GPU. Using CPU instead.")
@@ -100,35 +126,25 @@ class PCA_Model:
         else:
             print(f"File not found: {filepath}")
 
-    def umap(self, random_state=1, filename=None, celltype='celltype'):
-        """Generate UMAP visualization using combined PCA embeddings."""
-        print("Generating UMAP with combined PCA embeddings")
-
-        # Ensure PCA has been performed
-        combined_pca_key = "X_pca"
-        if not all(combined_pca_key in self.dataset[modality].obsm for modality in self.dataset.mod.keys()):
-            raise RuntimeError("PCA results not found. Run `train` first.")
-
-        # Use the latent PCA embeddings (assumes all modalities share the same embeddings)
-        latent_representation = next(iter(self.dataset.mod.values())).obsm[combined_pca_key]
-
-        # Create a synthetic AnnData object for UMAP
-        umap_data = ad.AnnData(X=latent_representation)
-        umap_data.obs = self.dataset.obs.copy()  # Copy metadata for UMAP visualization
-
-        # Compute neighbors and UMAP
-        sc.pp.neighbors(umap_data)
-        sc.tl.umap(umap_data, random_state=random_state)
-
-        # Save UMAP coordinates back to all modalities
+    def umap(self, random_state=1, filename=None, color_type='celltype'):
+        """Generate UMAP visualization using PCA embeddings for all modalities."""
+        print("Generating UMAP with PCA embeddings for all modalities")
+        
         for modality in self.dataset.mod.keys():
-            self.dataset[modality].obsm["X_pca_umap"] = umap_data.obsm["X_umap"]
+            print(f"Processing modality: {modality}")
+            
+            # Use the PCA latent representation for UMAP
+            sc.pp.neighbors(self.dataset[modality], use_rep="X_pca")
+            sc.tl.umap(self.dataset[modality], random_state=random_state)
+            
+            # Save UMAP representation in `obsm`
+            self.dataset[modality].obsm["X_pca_umap"] = self.dataset[modality].obsm["X_umap"]
 
-        # Plot UMAP and save the figure
-        if not filename:
-            filename = os.path.join(self.data_dir, f"pca_{self.name}_umap_plot.png")
-        sc.pl.umap(umap_data, color=celltype, save=filename)
-        print(f"UMAP plot saved as {filename}")
+            # Plotting UMAP and saving the figure
+            if not filename:
+                filename = os.path.join(self.data_dir, f"pca_{modality}_umap_plot.png")
+            sc.pl.umap(self.dataset[modality], color=color_type, save=filename)
+            print(f"UMAP plot for {modality} saved as {filename}")
 
 
 class MOFA_Model:
