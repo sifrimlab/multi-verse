@@ -1,38 +1,37 @@
 from config import load_config
-from dataloader import DataLoaderFactory
-from model import ModelFactory
-from train import TrainerSL, TrainerUL
-import torch
+from dataloader import DataLoader
+from model import PCA_Model, MOFA_Model, Mowgli_Model, MultiVI_Model
+from train import Trainer
 
 
 class Main:
-    def __init__(self, config_path):
-        self.config = load_config(config_path)
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
-        self.model = ModelFactory(self.config).get_model().to(self.device)
-        self.dataloader_factory = DataLoaderFactory(self.config)
+    """
+    please input directory and filename for your dataset
+    please choose model by setting "is_model"=true or false
+    """
+    def __init__(self) -> None:
+        pass
 
-        # Prepare train and validation dataloaders
-        self.train_dataloader = self.dataloader_factory.get_dataloader('train')
-        self.val_dataloader = self.dataloader_factory.get_dataloader('val')
+    def run():
+        if load_config()["training"]["pca"]["is_pca"]==True:
+            pca=PCA_Model()
+            trainer=Trainer(pca)
+            trainer.train()
+        if load_config["training"]["mofa+"]["is_mofa+"]==True:
+            mofa=MOFA_Model()
+            train=Trainer(mofa)
+            trainer.train()
+        if load_config["training"]["mowgli"]["is_mowgli"] ==True:
+            mowgli=Mowgli_Model()
+            trainer=Trainer(mowgli)
+            trainer.train()
+        if load_config["training"]["multivi"]["is_multivi"]==True:
+            multivi=MultiVI_Model()
+            trainer=Trainer(multivi)
+            trainer.train()
 
-        # Initialize Trainer with both train and validation dataloaders
-        if self.model == MOFA or self.model == MOWGLI:
-            self.trainerSL = TrainerSL(self.model, self.train_dataloader,
-                                self.val_dataloader, self.config, self.device)
-        else:
-            self.trainerUL = TrainerUL(self.model, self.train_dataloader, self.config, self.device)
-
-    def run(self):
-        # Move training process to Trainer
-        if self.model == MOFA or self.model == MOWGLI:
-            self.trainerSL.train()
-        else:
-            self.trainerUL.train()
-
-
+    
 
 if __name__ == "__main__":
-    main = Main(config_path="config.json")
+    main = Main()
     main.run()
