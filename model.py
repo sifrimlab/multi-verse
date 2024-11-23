@@ -38,7 +38,6 @@ import scvi
 
 
 
-
 class PCA_Model:
     """PCA implementation"""
     
@@ -100,35 +99,25 @@ class PCA_Model:
         else:
             print(f"File not found: {filepath}")
 
-    def umap(self, random_state=1, filename=None, celltype='celltype'):
-        """Generate UMAP visualization using combined PCA embeddings."""
-        print("Generating UMAP with combined PCA embeddings")
-
-        # Ensure PCA has been performed
-        combined_pca_key = "X_pca"
-        if not all(combined_pca_key in self.dataset[modality].obsm for modality in self.dataset.mod.keys()):
-            raise RuntimeError("PCA results not found. Run `train` first.")
-
-        # Use the latent PCA embeddings (assumes all modalities share the same embeddings)
-        latent_representation = next(iter(self.dataset.mod.values())).obsm[combined_pca_key]
-
-        # Create a synthetic AnnData object for UMAP
-        umap_data = ad.AnnData(X=latent_representation)
-        umap_data.obs = self.dataset.obs.copy()  # Copy metadata for UMAP visualization
-
-        # Compute neighbors and UMAP
-        sc.pp.neighbors(umap_data)
-        sc.tl.umap(umap_data, random_state=random_state)
-
-        # Save UMAP coordinates back to all modalities
+    def umap(self, random_state=1, filename=None, color_type='celltype'):
+        """Generate UMAP visualization using PCA embeddings for all modalities."""
+        print("Generating UMAP with PCA embeddings for all modalities")
+        
         for modality in self.dataset.mod.keys():
-            self.dataset[modality].obsm["X_pca_umap"] = umap_data.obsm["X_umap"]
+            print(f"Processing modality: {modality}")
+            
+            # Use the PCA latent representation for UMAP
+            sc.pp.neighbors(self.dataset[modality], use_rep="X_pca")
+            sc.tl.umap(self.dataset[modality], random_state=random_state)
+            
+            # Save UMAP representation in `obsm`
+            self.dataset[modality].obsm["X_pca_umap"] = self.dataset[modality].obsm["X_umap"]
 
-        # Plot UMAP and save the figure
-        if not filename:
-            filename = os.path.join(self.data_dir, f"pca_{self.name}_umap_plot.png")
-        sc.pl.umap(umap_data, color=celltype, save=filename)
-        print(f"UMAP plot saved as {filename}")
+            # Plotting UMAP and saving the figure
+            if not filename:
+                filename = os.path.join(self.data_dir, f"pca_{modality}_umap_plot.png")
+            sc.pl.umap(self.dataset[modality], color=color_type, save=filename)
+            print(f"UMAP plot for {modality} saved as {filename}")
 
 
 class MOFA_Model:
