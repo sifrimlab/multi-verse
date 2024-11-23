@@ -17,71 +17,19 @@ import torch
 import scvi
 
 from config import load_config 
-
-class ModelFactory:
-    def __init__(self, config_path="./config.json"):
-        """
-        Initialize the ModelFactory with the given config.
-        Config should specify model parameters and type.
-        """
-        self.config = load_config(config_path=config_path)
-
-    def get_model(self):
-        """
-        Create and return the appropriate model instance based on config.
-
-        example config file:
-                    {
-                    "models": {
-                        "pca": {
-                        "model_params": {
-                            "is_PCA": true,
-                            "data_dir": "path/to/data",
-                            "dataset": "dataset_name1",
-                            "n_components": 20,
-                            "name": "example_dataset1"
-                        }
-                        },
-                        "mofa": {
-                        "model_params": {
-                            "is_MOFA": true,
-                            "data_dir": "path/to/data",
-                            "dataset": "dataset_name2",
-                            "n_components": 25,
-                            "name": "example_dataset2"
-                        }}}}
-
-        """
-        
-        models = []
-
-        # Iterate through the models defined in the config
-        for model_name, model_config in self.config.get("models", {}).items():
-            model_params = model_config.get("model_params", {})
-            
-            # Check the model type and instantiate the corresponding model
-            if "is_PCA" in model_params and model_params.get("is_PCA"):
-                models.append(PCA_Model(model_params))
-            elif "is_MOFA" in model_params and model_params.get("is_MOFA"):
-                models.append(MOFA_Model(model_params))
-            elif "is_MOWGLI" in model_params and model_params.get("is_MOWGLI"):
-                models.append(Mowgli_Model(model_params))
-            elif "is_MULTIVI" in model_params and model_params.get("is_MULTIVI"):
-                models.append(MultiVI_Model(model_params))
-            else:
-                raise ValueError(f"Unsupported model type or missing configuration for: {model_name}")
-
-        return models
-    
+   
 
 class PCA_Model:
     """PCA implementation"""
 
-    def __init__(self, pca_params):
+    def __init__(self, dataset):
         """Initialize the PCA model with the specified parameters."""
+
+        pca_params= load_config()["models"]["pca"].get("model_params")
+
         print("Initializing PCA Model")
         self.data_dir = pca_params.get("data_dir")
-        self.dataset = pca_params.get("dataset")
+        self.dataset = dataset
         self.n_components = pca_params.get("n_components")
         self.name = pca_params.get("name")
         self.gpu_mode = False  # Default to CPU mode
@@ -170,6 +118,9 @@ class MOFA_Model:
     mu.set_options(display_style = "html", display_html_expand = 0b000)
 
     def __init__(self, mofa_params):
+        """Initialize the MOFA model with the specified parameters."""
+        mofa_params= load_config()["models"]["mofa"].get("model_params")
+
         self.data_dir = mofa_params.get("data_dir")
         self.dataset = mofa_params.get("dataset")
         self.name = mofa_params.get("datasetName")
@@ -281,7 +232,12 @@ class Mowgli_Model:
     """Mowgli model implementation."""
     
     def __init__(self, mowgli_params):
+        """Initialize the Mowgli model with the specified parameters."""
+
         print("Initializing Mowgli Model")
+
+        mowgli_params= load_config()["models"]["mowgli"].get("model_params")
+
         self.data_dir = mowgli_params.get("data_dir")
         self.dataset = mowgli_params.get("dataset")
         self.name = mowgli_params.get("datasetName")
@@ -393,7 +349,12 @@ class MultiVI_Model:
     """MultiVI Model implementation."""
     
     def __init__(self, multivi_params):
+        """Initialize the MultiVi model with the specified parameters."""
+
         print("Initializing MultiVI Model")
+
+        multivi_params= load_config()["models"]["multivi"].get("model_params")
+
         self.data_dir = multivi_params.get("data_dir")
         self.dataset = multivi_params.get("dataset")
         self.adata_rna = multivi_params.get("adata_rna") 
