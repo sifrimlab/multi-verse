@@ -16,26 +16,53 @@ import os
 import torch
 import scvi
 
-# class BaseModel(nn.Module):
-#     def __init__(self, config):
-#         super(BaseModel, self).__init__()
-#         self.model = self._initialize_model(config)
+from config import load_config
 
-#     def _initialize_model(self, config):
-#         # Initialize a model from needed library based on config
-#         return
+class ModelFactory:
+    def __init__(self, config_path="./config.json"):
+        """
+        Initialize the ModelFactory with the given config.
+        Config should specify model parameters and type.
+        """
+        self.config = load_config(config_path=config_path)
 
-#     def forward(self, x):
-#         return self.model(x)
+    def get_model(self):
+        """
+        Create and return the appropriate model instance based on config.
 
+        example config file:
+            {
+                "model_PCA": True
+                "model_params_PCA": {
+                    "data_dir": "path/to/data",
+                    "dataset": "dataset_name",
+                    "n_components": 20,
+                    "name": "example_dataset"
+                }
+            }
+            {
+                "model_MOFA": True
+                "model_params_MOFA": {
+                    "data_dir": "path/to/data",
+                    "dataset": "dataset_name",
+                    "n_components": 20,
+                    "name": "example_dataset"
+                }
+            }
+        """
+        model_type = self.config.get("model_type", "").lower()
+        model_params = self.config.get("model_params", {})
 
-# class ModelFactory:
-#     def __init__(self, config):
-#         self.config = config
-
-#     def get_model(self):
-#         return BaseModel(self.config)
-
+        if model_type == "pca":
+            return PCA_Model(**model_params)
+        elif model_type == "mofa":
+            return MOFA_Model(**model_params)
+        elif model_type == "mowgli":
+            return Mowgli_Model(**model_params)
+        elif model_type == "multivi":
+            return MultiVI_Model(**model_params)
+        else:
+            raise ValueError(f"Unsupported model type: {model_type}")
 
 
 class PCA_Model:
@@ -55,7 +82,7 @@ class PCA_Model:
 
     def to(self, device='cpu'):
         """
-        Method to set GPU or CPU mode for MOFA+.
+        Method to set GPU or CPU mode.
         """
         if device != 'cpu':
             print("PCA does not support GPU. Using CPU instead.")
