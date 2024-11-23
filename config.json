@@ -1,55 +1,58 @@
 {
-  "file_1": {
-    "data_path": "/media/gambino/students_workdir/thihanh/IBP/data/",
-    "file_name": "GSM5123952_multiVI_tea_filtered_feature_bc_matrix.h5",
-    "is_preprocessed": false,
-    "model_name": "mofa+",
-    "device": "cpu"
+  "basic": {
+   "data_path": "/media/gambino/students_workdir/thihanh/IBP/data/",
+   "file_name": "GSM5123952_multiVI_tea_filtered_feature_bc_matrix.h5",
+   "is_preprocessed": false
+  },
+  "model":{
+   "mofa+":{
+     "is_mofa+": true,
+     "model_params":{
+     "n_component":20
+     }},
+   "pca":{
+     "is_pca":true,
+     "model_params":{
+     "n_component":20
+     }},
+   "mowgli":{
+     "is_mowgli":true,
+     "model_params":{
+     "n_component":20
+     }},
+   "multivi":{
+     "is_multivi":true,
+     "model_params":{
+     "n_component":20
+     }}
   },
   "rna_filtering": {
-    "qc_metric_inplace": true,
-    "qc_metric_log1p": true,
-    "min_genes_by_counts": 500,
-    "max_genes_by_counts": 4500,
-    "max_total_counts_per_cell": 12000,
-    "max_pct_counts_mt": 30,
-    "min_cells_by_counts": 10,
-    "normalization_target_sum": 1e4,
-    "n_top_genes": 2000
+     "qc_metric_inplace": true,
+     "qc_metric_log1p": true,
+     "min_genes_by_counts": 500,
+     "max_genes_by_counts": 4500,
+     "max_total_counts_per_cell": 12000,
+     "max_pct_counts_mt": 30,
+     "min_cells_by_counts": 10,
+     "normalization_target_sum": 1e4,
+     "n_top_genes": 2000
   },
   "atac_filtering": {
-    "qc_metric_inplace": true,
-    "qc_metric_log1p": true,
-    "min_peaks_by_counts": 1000,
-    "max_peaks_by_counts": 15000,
-    "min_total_counts_per_cell": 1000,
-    "max_total_counts_per_cell": 50000,
-    "max_cells_by_counts": 4000,
-    "max_total_counts_by_gene": 1e4,
-    "normalization_target_sum": 1e4,
-    "n_top_peaks": 15000
+     "qc_metric_inplace": true,
+     "qc_metric_log1p": true,
+     "min_peaks_by_counts": 1000,
+     "max_peaks_by_counts": 15000,
+     "min_total_counts_per_cell": 1000,
+     "max_total_counts_per_cell": 50000,
+     "max_cells_by_counts": 4000,
+     "max_total_counts_by_gene": 1e4,
+     "normalization_target_sum": 1e4,
+     "n_top_peaks": 15000
   },
   "adt_filtering": {
-    "per_cell_normalization": true
+  "per_cell_normalization": true
   },
-  "training": {
-    "batch_size": null,
-    "epochs": 700,
-    "learning_rate": 3e-4,
-    "latent_dim": 3,
-    " ts ": [
-      30,
-      50,
-      70
-    ],
-    "use_anchor": false,
-    "use_potential": false,
-    "k": 3,
-    "reg_d": 1,
-    "reg_g": 1,
-    "reg_mmd": 1,
-    "l_dist_type": "kl",
-    "seed": 0,
-    "device": "cuda"
+ "training": {
+    "device":"cpu"
   }
 }
