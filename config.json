@@ -8,22 +8,40 @@
    "mofa+":{
      "is_mofa+": true,
      "model_params":{
-     "n_component":20
+      "gpu_mode": false,
+      "device": "cpu",
+      "n_factors": 20,
+      "umap_random_state": 1,
+      "umap_use_representation":"X_mofa",
+      "umap_color_type":"cell_type"
      }},
    "pca":{
      "is_pca":true,
      "model_params":{
-     "n_component":20
+      "n_component":20,
+      "gpu_mode": false,
+      "device": "cpu",
+      "umap_random_state": 1,
+      "umap_color_type": "celltype"
      }},
    "mowgli":{
      "is_mowgli":true,
      "model_params":{
-     "n_component":20
+     "device": "cpu",
+     "latent_dimensions": 4,
+     "umap_num_neighbors": 15,
+     "umap_size": 20,
+     "umap_alpha": 0.8
      }},
    "multivi":{
      "is_multivi":true,
      "model_params":{
-     "n_component":20
+     "latent_key": "",
+     "join":"outer",
+     "axis": 1,
+     "label": "modality",
+     "umap_min_dist": 0.2,
+     "umap_color_type": "cell_type"
      }}
   },
   "rna_filtering": {

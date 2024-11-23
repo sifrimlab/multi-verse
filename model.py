@@ -22,22 +22,24 @@ from config import load_config
 class PCA_Model:
     """PCA implementation"""
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, dataset_name):
         """Initialize the PCA model with the specified parameters."""
         print("Initializing PCA Model")
 
         pca_params= load_config()["models"]["pca"].get("model_params")
 
         self.dataset = dataset
+        self.name = dataset_name
         self.n_components = pca_params.get("n_components")
-        self.name = pca_params.get("name")
         self.gpu_mode = False  # Default to CPU mode
         self.device = pca_params.get("device")
-        self.latent_filepath = None
         self.umap_random_state = pca_params.get("umap_random_state")
-        self.umap_filename = pca_params.get("umap_filename")
         self.umap_color_type = pca_params.get("umap_color_type")
+
         self.output_dir = os.path.join("outputs", "pca_output")
+        os.makedirs(self.output_dir, exist_ok=True)
+
+        self.latent_filepath = None
 
         # For demonstration, we'll assume PCA is just a placeholder here
         # self.pca = PCA(n_components=self.n_components)
@@ -76,7 +78,7 @@ class PCA_Model:
     def save_latent(self):
         """Save the PCA latent representations."""
         print("Saving PCA latent embeddings")
-        output_path = os.path.join(self.output_dir, f"pca_{self.name}.h5ad")
+        output_path = os.path.join(self.output_dir, f"pca_latent_{self.name}.h5ad")
         self.dataset.write(output_path)
         print(f"Latent data saved to {output_path}")
         # Store the path for loading later (e.g., assign it to self.latent_filepath)
@@ -85,6 +87,7 @@ class PCA_Model:
     def load_latent(self):
         """Load latent data from a saved file."""
         print(f"Loading latent data from {self.latent_filepath}")
+
         if os.path.exists(self.latent_filepath):
             self.dataset = mu.read(self.latent_filepath)
             print("Latent data loaded successfully.")
@@ -106,33 +109,35 @@ class PCA_Model:
             self.dataset[modality].obsm["X_pca_umap"] = self.dataset[modality].obsm["X_umap"]
 
             # Plotting UMAP and saving the figure
-            if not self.umap_filename:
-                self.umap_filename = os.path.join(self.output_dir, f"pca_{modality}_umap_plot.png")
-            sc.pl.umap(self.dataset[modality], color=self.umap_color_type, save=self.umap_filename)
-            print(f"UMAP plot for {modality} saved as {self.umap_filename}")
+            umap_filename = os.path.join(self.output_dir, f"pca_{self.name}_umap_plot.png")
+            sc.pl.umap(self.dataset[modality], color=self.umap_color_type, save=umap_filename)
+            print(f"UMAP plot for {modality} saved as {umap_filename}")
 
 
 class MOFA_Model:
     """MOFA+ Model implementation"""
     mu.set_options(display_style = "html", display_html_expand = 0b000)
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, dataset_name):
         """Initialize the MOFA model with the specified parameters."""
         print("Initializing MOFA+ Model")
         
         mofa_params= load_config()["models"]["mofa"].get("model_params")
 
         self.dataset = dataset
-        self.name = mofa_params.get("datasetName")
+        self.name = dataset_name
+
         self.gpu_mode = mofa_params.get("gpu_mode")
         self.device = mofa_params.get("device")
         self.n_factors = mofa_params.get("n_factors")
-        self.outfilepath = mofa_params.get("outfilepath")
-        self.latent_filepath = mofa_params.get("latent_filepath")
         self.umap_random_state=mofa_params.get("umap_random_state")
         self.umap_use_representation=mofa_params.get("umap_use_representation")
         self.umap_color_type=mofa_params.get("umap_color_type")
+
         self.output_dir = os.path.join("outputs", "mofa_output")
+        os.makedirs(self.output_dir, exist_ok=True)
+
+        self.latent_filepath = None
 
 
     def to(self):
@@ -154,12 +159,11 @@ class MOFA_Model:
         Train the MOFA model.
         """
         print("Training MOFA+ Model")
-        if not self.outfilepath:
-            self.outfilepath = os.path.join(self.output_dir, f"mofa_{self.name}.hdf5")
+        outfilepath = os.path.join(self.output_dir, f"mofa_{self.name}.hdf5")
         try:
             mu.tl.mofa(self.dataset, n_factors=self.n_factors, 
-                       outfile=self.outfilepath, gpu_mode=self.gpu_mode)
-            print(f"Model saved at: {self.outfilepath}")
+                       outfile=outfilepath, gpu_mode=self.gpu_mode)
+            print(f"Model saved at: {outfilepath}")
         except Exception as e:
             print(f"Error during training: {e}")
             raise
@@ -183,7 +187,9 @@ class MOFA_Model:
             }
             
             # Define the output path for the saved .npy file
-            output_path = os.path.join(self.output_dir, f"mofa_{self.name}.npy")
+            output_path = os.path.join(self.output_dir, f"mofa_latent_{self.name}.npy")
+            
+            self.latent_filepath = output_path
             
             # Save the latent data to a .npy file (using np.save)
             np.save(output_path, latent_data)
@@ -230,7 +236,7 @@ class MOFA_Model:
 class Mowgli_Model:
     """Mowgli model implementation."""
     
-    def __init__(self, dataset):
+    def __init__(self, dataset, dataset_name):
         """Initialize the Mowgli model with the specified parameters."""
 
         print("Initializing Mowgli Model")
@@ -238,18 +244,18 @@ class Mowgli_Model:
         mowgli_params= load_config()["models"]["mowgli"].get("model_params")
 
         self.dataset = dataset
-        self.name = mowgli_params.get("datasetName")
+        self.name = dataset_name
         self.device = mowgli_params.get("device")
         self.latent_dimensions = mowgli_params.get("latent_dimensions")
         self.umap_num_neighbors = mowgli_params.get("umap_num_neighbors")
         self.umap_size = mowgli_params.get("umap_size")
         self.umap_alpha = mowgli_params.get("umap_alpha")
-        self.umap_filename=mowgli_params.get("umap_filename") 
 
         # Create the model instance during initialization
         self.model = mowgli.models.MowgliModel(latent_dim=self.latent_dimensions)
         
         # Ensure output directory exists
+        self.latent_filepath = None
         self.output_dir = os.path.join("outputs", "mowgli_output")
         os.makedirs(self.output_dir, exist_ok=True)
         
@@ -291,9 +297,11 @@ class Mowgli_Model:
     def save_latent(self):
         """Save latent data generated with the Mowgli model."""
         print("Saving latent data")
+        output_path = os.path.join(self.output_dir, f"mowgli_latent_{self.name}.npy"),
+        self.latent_filepath = output_path
         try:
             np.save(
-                os.path.join(self.output_dir, f"mowgli_{self.name}.npy"),
+                self.latent_filepath,
                 {
                     "W": self.dataset.obsm["W_OT"],
                     **{"H_" + mod: self.dataset[mod].uns["H_OT"] for mod in self.dataset.mod},
@@ -310,13 +318,12 @@ class Mowgli_Model:
         """Load latent data from saved files."""
         print("Loading latent data")
         try:
-            file_path = os.path.join(self.output_dir, f"mowgli_{self.name}.npy")
-            mowgli_data = np.load(file_path, allow_pickle=True).item()
+            mowgli_data = np.load(self.latent_filepath, allow_pickle=True).item()
             self.dataset.obsm["W_mowgli"] = mowgli_data["W"]
             self.dataset.uns = {}
             return mowgli_data
         except FileNotFoundError:
-            print(f"File not found: {file_path}")
+            print(f"File not found: {self.latent_filepath}")
         except Exception as e:
             print(f"Error loading latent data: {e}")
 
@@ -329,15 +336,14 @@ class Mowgli_Model:
             sc.pl.umap(self.dataset, size=self.umap_size, alpha=self.umap_alpha)
         
             # If filename is not provided, use default that includes self.name
-            if self.umap_filename is None:
-                self.umap_filename = f"mowgli_{self.name}_umap_plot.png"
+            umap_filename = os.path.join(self.output_dir, f"mowgli_{self.name}_umap_plot.png")
         
             # Save the plot
-            plt.savefig(os.path.join(self.output_dir, self.umap_filename))
+            plt.savefig(os.path.join(self.output_dir, umap_filename))
             plt.close()
         
             print(f"A UMAP plot for Mowgli model with dataset {self.name} was successfully 
-                  generated and saved as {self.umap_filename}")
+                  generated and saved as {umap_filename}")
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")
@@ -346,7 +352,7 @@ class Mowgli_Model:
 class MultiVI_Model:
     """MultiVI Model implementation."""
     
-    def __init__(self, dataset):
+    def __init__(self, dataset, dataset_name):
         """Initialize the MultiVi model with the specified parameters."""
 
         print("Initializing MultiVI Model")
@@ -354,28 +360,24 @@ class MultiVI_Model:
         multivi_params= load_config()["models"]["multivi"].get("model_params")
 
         self.dataset = dataset
-        self.adata_rna = multivi_params.get("adata_rna") 
-        self.adata_atac = multivi_params.get("adata_atac")
+        self.name = dataset_name
+
         self.latent_key = multivi_params.get("latent_key")
-        self.name = multivi_params.get("datasetName")
         self.join = multivi_params.get("join")
         self.axis = multivi_params.get("axis")
         self.label = multivi_params.get("label")
-        self.join = multivi_params.get("join")
-        self.umap_filename = multivi_params.get("umap_filename")
         self.umap_min_dist = multivi_params.get("umap_min_dist")
         self.umap_color_type = multivi_params.get("umap_color_type")
+
+        self.latent_filepath = None
         self.output_dir = os.path.join("outputs", "multivi_output")
+        os.makedirs(self.output_dir, exist_ok=True)
 
-
-        self.adata_mvi = ad.concat([self.adata_rna, self.adata_atac], 
-                                   join=self.join, axis=self.axis, label=self.label)
-
-        scvi.model.MULTIVI.setup_anndata(self.adata_mvi)
+        scvi.model.MULTIVI.setup_anndata(self.dataset)
         self.model = scvi.model.MULTIVI(
-            self.adata_mvi,
-            n_genes=(self.adata_mvi.var["modality"] == "0").sum(),
-            n_regions=(self.adata_mvi.var["modality"] == "1").sum(),
+            self.dataset,
+            n_genes=(self.dataset.var["modality"] == "0").sum(),
+            n_regions=(self.dataset.var["modality"] == "1").sum(),
             )
             
     def to(self, device='cpu'):
@@ -404,20 +406,22 @@ class MultiVI_Model:
     def save_latent(self):
         """Save latent data generated with the MultiVI model."""
         print("Saving latent data")
+        output = os.path.join(self.output_dir, f"multivi_latent_{self.name}.txt"),
+        self.latent_filepath = output
         try:
             self.adata_mvi.obsm[self.latent_key] = self.model.get_latent_representation()
-            self.adata_mvi.write(self.output_dir+f"multivi_{self.name}.txt")
+            self.adata_mvi.write(self.latent_filepath)
 
-            print(f"MultiVI model for dataset {self.name} was saved as multivi_{self.dataset}.txt")
+            print(f"MultiVI model for dataset {self.name} was saved as {self.latent_filepath}")
         except Exception as e:
             print(f"Error saving latent data: {e}")
 
     def load_latent(self):
         """Load latent data from saved files."""
-        print(f"Loading latent data from {self.output_dir}multivi_{self.name}.txt")
+        print(f"Loading latent data from {self.latent_filepath}")
         
         # Check if the file exists
-        if os.path.exists(self.output_dir + f"multivi_{self.name}.txt"):
+        if os.path.exists(self.latent_filepath):
             try:
                 # Assuming the file is a tab-delimited text file, you can use pandas or numpy to load it.
                 # We use pandas here because it's commonly used for reading tabular data into AnnData objects
