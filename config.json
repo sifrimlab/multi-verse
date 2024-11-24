@@ -1,76 +1,80 @@
 {
-  "basic": {
-   "data_path": "/media/gambino/students_workdir/thihanh/IBP/data/",
-   "file_name": "GSM5123952_multiVI_tea_filtered_feature_bc_matrix.h5",
-   "is_preprocessed": false
+  "data": {
+    "dataset_name": "pbmc_10k",
+    "data_path": "/media/gambino/students_workdir/thihanh/IBP/data/",
+    "rna": {
+      "file_name": "10x-Multiome-Pbmc10k-RNA.h5ad",
+      "is_preprocessed": false
+    },
+    "atac": {
+      "file_name": "10x-Multiome-Pbmc10k-ATAC.h5ad",
+      "is_preprocessed": false
+    }
   },
-  "model":{
-   "mofa+":{
-     "is_mofa+": true,
-     "model_params":{
-      "gpu_mode": false,
+  "model": {
+    "is_mofa+": false,
+    "is_pca": true,
+    "is_multivi": false,
+    "is_mowgli": false,
+    "pca": {
+      "n_components": 20,
       "device": "cpu",
+      "umap_random_state": 1,
+      "umap_color_type": "cell_type"
+    },
+    "mofa+": {
+      "device": "cuda:0",
       "n_factors": 20,
+      "n_iteration": 1000,
       "umap_random_state": 1,
-      "umap_use_representation":"X_mofa",
-      "umap_color_type":"cell_type"
-     }},
-   "pca":{
-     "is_pca":true,
-     "model_params":{
-      "n_component":20,
-      "gpu_mode": false,
-      "device": "cpu",
-      "umap_random_state": 1,
-      "umap_color_type": "celltype"
-     }},
-   "mowgli":{
-     "is_mowgli":true,
-     "model_params":{
-     "device": "cpu",
-     "latent_dimensions": 4,
-     "umap_num_neighbors": 15,
-     "umap_size": 20,
-     "umap_alpha": 0.8
-     }},
-   "multivi":{
-     "is_multivi":true,
-     "model_params":{
-     "latent_key": "",
-     "join":"outer",
-     "axis": 1,
-     "label": "modality",
-     "umap_min_dist": 0.2,
-     "umap_color_type": "cell_type"
-     }}
+      "umap_use_representation": "X_mofa",
+      "umap_color_type": "cell_type"
+    },
+    "multivi": {
+      "device": "cuda:0",
+      "protein_expression_obsm_key": null,
+      "max_epochs": 500,
+      "learning_rate": 0.0001,
+      "umap_color_type": "cell_type"
+    },
+    "mowgli": {
+      "device": "cuda:0",
+      "latent_dimensions": 4,
+      "umap_use_representation": "X_mowgli",
+      "umap_num_neighbors": 15,
+      "umap_size": 20,
+      "umap_alpha": 0.8
+    }
   },
-  "rna_filtering": {
-     "qc_metric_inplace": true,
-     "qc_metric_log1p": true,
-     "min_genes_by_counts": 500,
-     "max_genes_by_counts": 4500,
-     "max_total_counts_per_cell": 12000,
-     "max_pct_counts_mt": 30,
-     "min_cells_by_counts": 10,
-     "normalization_target_sum": 1e4,
-     "n_top_genes": 2000
+  "preprocess_params": {
+    "rna_filtering": {
+      "qc_metric_inplace": true,
+      "qc_metric_log1p": true,
+      "min_genes_by_counts": 500,
+      "max_genes_by_counts": 4500,
+      "max_total_counts_per_cell": 12000,
+      "max_pct_counts_mt": 30,
+      "min_cells_by_counts": 10,
+      "normalization_target_sum": 1e4,
+      "n_top_genes": 2000
+    },
+    "atac_filtering": {
+      "qc_metric_inplace": true,
+      "qc_metric_log1p": true,
+      "min_peaks_by_counts": 1000,
+      "max_peaks_by_counts": 15000,
+      "min_total_counts_per_cell": 1000,
+      "max_total_counts_per_cell": 50000,
+      "max_cells_by_counts": 4000,
+      "max_total_counts_by_gene": 1e4,
+      "normalization_target_sum": 1e4,
+      "n_top_peaks": 15000
+    },
+    "adt_filtering": {
+      "per_cell_normalization": true
+    }
   },
-  "atac_filtering": {
-     "qc_metric_inplace": true,
-     "qc_metric_log1p": true,
-     "min_peaks_by_counts": 1000,
-     "max_peaks_by_counts": 15000,
-     "min_total_counts_per_cell": 1000,
-     "max_total_counts_per_cell": 50000,
-     "max_cells_by_counts": 4000,
-     "max_total_counts_by_gene": 1e4,
-     "normalization_target_sum": 1e4,
-     "n_top_peaks": 15000
-  },
-  "adt_filtering": {
-  "per_cell_normalization": true
-  },
- "training": {
-    "device":"cpu"
+  "training": {
+    "device": "cpu"
   }
 }

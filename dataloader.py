@@ -8,7 +8,7 @@ from config import load_config
 from typing import List
 import json
 
-#Output type = anndata, mudata, cobolt_data_object?
+#Output type = anndata, mudata
 
 class DataLoader:
     def __init__(self, file_path: str = "", modality: str = "", isProcessed=True):
@@ -108,6 +108,7 @@ class DataLoader:
                     pass
 
         self.data = mu.MuData(data_dict)
+        self.data.obs["cell_type"] = self.data["rna"].obs["cell_type"]
         mu.pp.intersect_obs(self.data)   # Make sure number of cells are the same for all modalities
         return self.data
 
@@ -121,6 +122,9 @@ class DataLoader:
             list_ann.append(mudata[mod])
 
         anndata = ad.concat(list_ann, axis="var")
+        anndata.obs["cell_type"] = mudata["rna"].obs["cell_type"]
+        num_obs = anndata.n_obs
+        anndata.obs["modality"] = np.zeros(num_obs, dtype=int)
         self.data = anndata
         return self.data
 
@@ -160,7 +164,7 @@ class DataLoader:
 class Preprocessing:
     def __init__(self, anndata: ad.AnnData, config_path: str="./config.json"):
         self.data = anndata
-        self.config = load_config(config_path=config_path)
+        self.config = load_config(config_path=config_path).get("preprocess_params")
     
     def rna_preprocessing(self) -> ad.AnnData:
         """
