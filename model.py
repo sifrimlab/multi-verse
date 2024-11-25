@@ -204,44 +204,42 @@ class MOFA_Model(ModelFactory):
             X_mofa = self.dataset.obsm["X_mofa"]
             LFs_mofa = self.dataset.varm["LFs_mofa"]
             
-            # Create a dictionary to store the latent embeddings and factors
-            latent_data = {
-                'X_mofa': X_mofa,
-                'LFs_mofa': LFs_mofa
-            }
+            # Storing both the latent embeddings and the factors in the AnnData object
+            adata = sc.AnnData(X=X_mofa, var=LFs_mofa)
+            adata.uns['latent_factors'] = LFs_mofa
             
-            # Define the output path for the saved .npy file
-            output_path = os.path.join(self.output_dir, f"mofa_latent_{self.dataset_name}.npy")
+            # Define the output path for the saved .h5ad file
+            output_path = os.path.join(self.output_dir, f"mofa_latent_{self.dataset_name}.h5ad")
             
-            self.latent_filepath = output_path
-            
-            # Save the latent data to a .npy file (using np.save)
-            np.save(output_path, latent_data)
+            # Save the AnnData object to .h5ad format
+            adata.write(output_path)
             
             print(f"Latent data saved to {output_path}")
 
         except Exception as e:
-            print(f"Error saving latent embeddings to dataset: {e}")
+            print(f"Error saving latent embeddings to .h5ad: {e}")
 
-    def load_latent(self) :
-        """Load latent data from saved .npy files."""
+    def load_latent(self):
+        """Load latent data from saved .h5ad files."""
         print(f"Loading latent data from {self.latent_filepath}")
         
         if os.path.exists(self.latent_filepath):
             try:
-                # Load the latent data from the .npy file (using np.load)
-                latent_data = np.load(self.latent_filepath, allow_pickle=True).item()  # `.item()` to get the dictionary
+                # Load the latent data from the .h5ad file using scanpy
+                adata = sc.read(self.latent_filepath)
                 
-                # Restore the saved latent embeddings and factors into the dataset object
-                if 'X_mofa' in latent_data:
-                    self.dataset.obsm['X_mofa'] = latent_data['X_mofa']
-                if 'LFs_mofa' in latent_data:
-                    self.dataset.varm['LFs'] = latent_data['LFs_mofa']
-                    
+                # Extract the latent embeddings and factors
+                X_mofa = adata.X  # Latent embeddings stored in X
+                LFs_mofa = adata.var  # Latent factors stored in var
+                
+                # Restore the loaded data into the dataset object
+                self.dataset.obsm['X_mofa'] = X_mofa
+                self.dataset.varm['LFs_mofa'] = LFs_mofa
+                
                 print("Latent data loaded successfully.")
             
             except Exception as e:
-                print(f"Error loading latent data: {e}")
+                print(f"Error loading latent data from .h5ad: {e}")
         else:
             print(f"File not found: {self.latent_filepath}")
 
@@ -418,35 +416,67 @@ class Mowgli_Model(ModelFactory):
         # Add evaluation logic here (e.g., metrics calculation)
         raise NotImplementedError("Evaluation method not implemented yet.")
 
-
     def save_latent(self):
-        """Save latent data generated with the Mowgli model."""
+        """Save latent data generated with the Mowgli model in .h5ad format."""
         print("Saving latent data")
-        output_path = os.path.join(self.output_dir, f"mowgli_latent_{self.dataset_name}.npy"),
+        
+        # Prepare the latent data for saving
+        W = self.dataset.obsm["W_OT"]
+        H = {f"H_{mod}": self.dataset[mod].uns["H_OT"] for mod in self.dataset.mod}
+        losses = {
+            "loss_overall": self.model.losses,
+            "loss_w": self.model.losses_w,
+            "loss_h": self.model.losses_h
+        }
+        
+        # Create an AnnData object to store the data
+        adata = sc.AnnData(X=W)  # W is the main data matrix (e.g., cells x latent dimensions)
+        
+        # Add H_ matrices (for each modality) into .uns
+        for mod, h_matrix in H.items():
+            adata.uns[mod] = h_matrix
+        
+        # Add losses to .uns
+        adata.uns.update(losses)
+        
+        # Define the output path for the saved .h5ad file
+        output_path = os.path.join(self.output_dir, f"mowgli_latent_{self.dataset_name}.h5ad")
         self.latent_filepath = output_path
+        
+        # Save the AnnData object to .h5ad format
         try:
-            np.save(
-                self.latent_filepath,
-                {
-                    "W": self.dataset.obsm["W_OT"],
-                    **{"H_" + mod: self.dataset[mod].uns["H_OT"] for mod in self.dataset.mod},
-                    "loss_overall": self.model.losses,
-                    "loss_w": self.model.losses_w,
-                    "loss_h": self.model.losses_h
-                }
-            )
-
+            adata.write(self.latent_filepath)
+            print(f"Latent data saved to {self.latent_filepath}")
         except Exception as e:
             print(f"Error saving latent data: {e}")
 
     def load_latent(self):
-        """Load latent data from saved files."""
+        """Load latent data from saved .h5ad file."""
         print("Loading latent data")
+        
         try:
-            mowgli_data = np.load(self.latent_filepath, allow_pickle=True).item()
-            self.dataset.obsm["W_mowgli"] = mowgli_data["W"]
-            self.dataset.uns = {}
-            return mowgli_data
+            # Load the latent data from the .h5ad file
+            adata = sc.read(self.latent_filepath)
+            
+            # Restore the latent embeddings
+            self.dataset.obsm["W_mowgli"] = adata.X
+            
+            # Restore the modality-specific H_ matrices (for each modality)
+            for mod in self.dataset.mod:
+                if f"H_{mod}" in adata.uns:
+                    self.dataset[mod].uns["H_OT"] = adata.uns[f"H_{mod}"]
+            
+            # Restore losses (if necessary)
+            if "loss_overall" in adata.uns:
+                self.model.losses = adata.uns["loss_overall"]
+            if "loss_w" in adata.uns:
+                self.model.losses_w = adata.uns["loss_w"]
+            if "loss_h" in adata.uns:
+                self.model.losses_h = adata.uns["loss_h"]
+            
+            print("Latent data loaded successfully.")
+            return adata
+            
         except FileNotFoundError:
             print(f"File not found: {self.latent_filepath}")
         except Exception as e:
