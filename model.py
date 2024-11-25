@@ -345,10 +345,12 @@ class MultiVI_Model(ModelFactory):
         """Generate UMAP visualization."""
         print("Generating UMAP plot")
         try:
+            sc.settings.figdir = self.output_dir
+            umap_filename = f"_multi_{self.dataset_name}_plot.png"
             sc.pp.neighbors(self.dataset, use_rep=self.latent_key)
             sc.tl.umap(self.dataset)
             sc.pl.umap(self.dataset, color=self.umap_color_type, 
-                       save=(self.output_dir+f"multivi_{self.dataset_name}_umap_plot.png"))
+                       save=umap_filename)
             print(f"A UMAP plot for MultiVI model with dataset {self.dataset_name} "\
                   f"was succesfully generated and saved as multivi_{self.dataset_name}_umap_plot.png")
 
@@ -470,3 +472,5 @@ class Mowgli_Model(ModelFactory):
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")
+
+
