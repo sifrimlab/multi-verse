@@ -25,7 +25,7 @@ class Trainer:
             key for key, value in self.data_config.items()
             if isinstance(value, dict) and "data_path" in value
         ]
-        print("Number of Detected Datasets:", self.dataset_names)
+        print("Datasets Detected:", self.dataset_names)
 
 
     def load_datasets(self):

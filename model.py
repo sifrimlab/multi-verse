@@ -72,6 +72,10 @@ class PCA_Model(ModelFactory):
         self.umap_random_state = pca_params.get("umap_random_state")
         self.umap_color_type = pca_params.get("umap_color_type")  # Default to 'cell_type' if not set
 
+        if self.umap_color_type not in self.dataset.obs:    
+            print(f"Warning: '{self.umap_color_type}' not found in dataset. Defaulting to None for coloring.")
+            self.umap_color_type = None  # Fallback to None if not found
+
         # Output for PCA model is in ./outputs/pca_output
         self.output_dir = os.path.join(self.outdir, "pca_output")
         os.makedirs(self.output_dir, exist_ok=True)
@@ -165,6 +169,11 @@ class MOFA_Model(ModelFactory):
         self.umap_use_representation=mofa_params.get("umap_use_representation")
         self.umap_color_type=mofa_params.get("umap_color_type")
 
+        if self.umap_color_type not in self.dataset.obs:    
+            print(f"Warning: '{self.umap_color_type}' not found in dataset. Defaulting to None for coloring.")
+            self.umap_color_type = None  # Fallback to None if not found
+
+
         # Output for MOFA+ model is in ./outputs/mofa_output
         self.output_dir = os.path.join(self.outdir, "mofa_output")
         os.makedirs(self.output_dir, exist_ok=True)
@@ -198,30 +207,36 @@ class MOFA_Model(ModelFactory):
         """
         try:
             # Save the latent embeddings to the dataset object
-            print("Saving latent embeddings as .npy file to dataset object...")
+            print("Saving latent embeddings as .h5ad file to dataset...")
             
             # Ensure the necessary embeddings and factors are in the dataset
             X_mofa = self.dataset.obsm["X_mofa"]
             LFs_mofa = self.dataset.varm["LFs_mofa"]
             
-            # Storing both the latent embeddings and the factors in the AnnData object
+            # Create an AnnData object to store the data
             adata = sc.AnnData(X=X_mofa, var=LFs_mofa)
             adata.uns['latent_factors'] = LFs_mofa
             
             # Define the output path for the saved .h5ad file
             output_path = os.path.join(self.output_dir, f"mofa_latent_{self.dataset_name}.h5ad")
+            self.latent_filepath = output_path  # Update latent_filepath
             
             # Save the AnnData object to .h5ad format
-            adata.write(output_path)
+            adata.write(self.latent_filepath)
             
-            print(f"Latent data saved to {output_path}")
-
+            print(f"Latent data saved to {self.latent_filepath}")
+        
         except Exception as e:
             print(f"Error saving latent embeddings to .h5ad: {e}")
+            raise
+
 
     def load_latent(self):
         """Load latent data from saved .h5ad files."""
         print(f"Loading latent data from {self.latent_filepath}")
+        
+        if not self.latent_filepath:
+            raise ValueError("latent_filepath is None. Ensure save_latent() has been successfully executed.")
         
         if os.path.exists(self.latent_filepath):
             try:
@@ -240,8 +255,11 @@ class MOFA_Model(ModelFactory):
             
             except Exception as e:
                 print(f"Error loading latent data from .h5ad: {e}")
+                raise
         else:
             print(f"File not found: {self.latent_filepath}")
+            raise FileNotFoundError(f"The file {self.latent_filepath} does not exist.")
+
 
     def umap(self):
         """Generate UMAP visualization."""
@@ -277,6 +295,10 @@ class MultiVI_Model(ModelFactory):
         self.latent_key = "X_multivi"
         self.umap_color_type = multivi_params.get("umap_color_type")
 
+        if self.umap_color_type not in self.dataset.obs:    
+            print(f"Warning: '{self.umap_color_type}' not found in dataset. Defaulting to None for coloring.")
+            self.umap_color_type = None  # Fallback to None if not found
+
         # Output for MOFA+ model is in ./outputs/multivi_output
         self.output_dir = os.path.join(self.outdir, "multivi_output")
         os.makedirs(self.output_dir, exist_ok=True)
@@ -289,6 +311,7 @@ class MultiVI_Model(ModelFactory):
             n_genes=(self.dataset.var["feature_types"] == "Gene Expression").sum(),
             n_regions=(self.dataset.var["feature_types"] == "Peaks").sum(),
             )
+
             
     def to(self):
         """
@@ -363,13 +386,15 @@ class Mowgli_Model(ModelFactory):
         """Initialize the Mowgli model with the specified parameters."""
 
         print("Initializing Mowgli Model")
-
-        mowgli_params= load_config()["models"]["mowgli"].get("model_params")
+        
+        super().__init__(dataset, dataset_name, config_path=config_path, model_name="mowgli")
+        mowgli_params = self.model_params.get(self.model_name)
 
         self.dataset = dataset
         self.dataset_name = dataset_name
         self.device = mowgli_params.get("device")
         self.latent_dimensions = mowgli_params.get("latent_dimensions")
+        self.learning_rate = mowgli_params.get("learning_rate")
         self.umap_num_neighbors = mowgli_params.get("umap_num_neighbors")
         self.umap_size = mowgli_params.get("umap_size")
         self.umap_alpha = mowgli_params.get("umap_alpha")
