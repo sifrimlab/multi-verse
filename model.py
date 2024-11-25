@@ -346,7 +346,7 @@ class MultiVI_Model(ModelFactory):
         print("Generating UMAP plot")
         try:
             sc.settings.figdir = self.output_dir
-            umap_filename = f"_multi_{self.dataset_name}_plot.png"
+            umap_filename = f"_multivi_{self.dataset_name}_plot.png"
             sc.pp.neighbors(self.dataset, use_rep=self.latent_key)
             sc.tl.umap(self.dataset)
             sc.pl.umap(self.dataset, color=self.umap_color_type, 
