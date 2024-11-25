@@ -70,7 +70,7 @@ class PCA_Model(ModelFactory):
         else:
             self.gpu_mode = False
         self.umap_random_state = pca_params.get("umap_random_state")
-        self.umap_color_type = pca_params.get("umap_color_type")
+        self.umap_color_type = pca_params.get("umap_color_type")  # Default to 'cell_type' if not set
 
         # Output for PCA model is in ./outputs/pca_output
         self.output_dir = os.path.join(self.outdir, "pca_output")

@@ -1,7 +1,6 @@
 {
   "data": {
-    "dataset1": {
-      "dataset_name": "pbmc_10k",
+    "dataset_Pbmc10k": {
       "data_path": "/home/zuzanna/data/",
       "rna": {
         "file_name": "10x-Multiome-Pbmc10k-RNA.h5ad",
@@ -12,15 +11,18 @@
         "is_preprocessed": false
       }
     },
-    "dataset2": {
-      "dataset_name": "pbmc_10k",
+    "dataset_TEA": {
       "data_path": "/home/zuzanna/data/",
       "rna": {
-        "file_name": "10x-Multiome-Pbmc10k-RNA.h5ad",
+        "file_name": "GSM4949911_X061-AP0C1W1_leukopak_perm-cells_tea_fulldepth_cellrangerarc_filtered_feature_bc_matrix.h5",
         "is_preprocessed": false
       },
       "atac": {
-        "file_name": "10x-Multiome-Pbmc10k-ATAC.h5ad",
+        "file_name": "GSM4949911_X061-AP0C1W1_leukopak_perm-cells_tea_fulldepth_cellrangerarc_filtered_feature_bc_matrix.h5",
+        "is_preprocessed": false
+      },
+      "adt": {
+        "file_name": "GSM4949911_tea_fulldepth_adt_counts.csv",
         "is_preprocessed": false
       }
     }
