@@ -11,6 +11,7 @@ class Trainer:
         model is an object from one model class in model.py
         """
         # Data information from config file
+        self.config_path=config_path
         self.config = load_config(config_path=config_path)
         self.data_info = self.config.get("data")
         self.dataset_path = self.data_info.get("data_path")
@@ -40,7 +41,7 @@ class Trainer:
                 is_preprocess=mod_info.get("is_preprocessed")
 
                 # Load anndatas
-                ann = DataLoader(file_path=filepath, modality=modality, isProcessed=is_preprocess).preprocessing()
+                ann = DataLoader(file_path=filepath, modality=modality, isProcessed=is_preprocess, config_path=self.config_path).preprocessing()
                 list_anndata.append(ann)
             return list_modality, list_anndata
         else:
@@ -48,7 +49,7 @@ class Trainer:
             filename = self.data_info.get("file_name")
             filepath = os.path.join(self.dataset_path, filename)
             is_preprocess = self.data_info.get("is_preprocessed")
-            mu = DataLoader(file_path=filepath, isProcessed=is_preprocess).read_mudata()
+            mu = DataLoader(file_path=filepath, isProcessed=is_preprocess, config_path=self.config_path).read_mudata()
             self.data = mu
             return self.data
     
@@ -57,7 +58,7 @@ class Trainer:
         Concatenate list of AnnDatas or Fuse list of AnnDatas into one MuData or Load one MuData
         self.modalities=['rna', 'atac']
         """
-        dataloader = DataLoader()
+        dataloader = DataLoader(config_path=self.config_path)
         if data_type=="concatenate":
             list_modality, list_anndata = self.load_dataset()
             data_concat = dataloader.anndata_concatenate(list_anndata=list_anndata, list_modality=list_modality)
@@ -79,19 +80,19 @@ class Trainer:
             if model_name == "pca" and self.model_info["is_pca"]:
                 # PCA use concatenated AnnData object
                 data_pca = self.dataset_select(data_type="concatenate")
-                models[model_name]=PCA_Model(dataset=data_pca, dataset_name=self.dataset_name)
+                models[model_name]=PCA_Model(dataset=data_pca, dataset_name=self.dataset_name, config_path=self.config_path)
             if model_name == "mofa+" and self.model_info["is_mofa+"]:
                 # MOFA+ use MuData object
                 data_mofa = self.dataset_select(data_type="mudata")
-                models[model_name]=MOFA_Model(dataset=data_mofa, dataset_name=self.dataset_name)
+                models[model_name]=MOFA_Model(dataset=data_mofa, dataset_name=self.dataset_name, config_path=self.config_path)
             if model_name == "multivi" and self.model_info["is_multivi"]:
                 # Multivi use concatenated AnnData object
                 data_multivi = self.dataset_select(data_type="concatenate")
-                models[model_name]=MultiVI_Model(dataset=data_multivi, dataset_name=self.dataset_name)
+                models[model_name]=MultiVI_Model(dataset=data_multivi, dataset_name=self.dataset_name, config_path=self.config_path)
             if model_name == "mowgli" and self.model_info["is_mowgli"]:
                 # Mowgli use MuData object
                 data_mowgli = self.dataset_select(data_type="mudata")
-                models[model_name]=Mowgli_Model(dataset=data_mowgli, dataset_name=self.dataset_name)
+                models[model_name]=Mowgli_Model(dataset=data_mowgli, dataset_name=self.dataset_name, config_path=self.config_path)
 
         self.models = models
         return self.models

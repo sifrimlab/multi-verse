@@ -11,7 +11,8 @@ import json
 #Output type = anndata, mudata
 
 class DataLoader:
-    def __init__(self, file_path: str = "", modality: str = "", isProcessed=True):
+    def __init__(self, file_path: str = "", modality: str = "", isProcessed=True, config_path: str="./config.json"):
+        self.config_path = config_path
         self.file_path = file_path
         self.modality = modality
         self.is_preprocessed = isProcessed
@@ -138,26 +139,30 @@ class DataLoader:
             A muon.MuData object
         """
          # Modality and file_path should be provided for the read_anndata() function to work
-        if self.modality != "" and self.file_path != "":
-            self.read_anndata()
-            if not self.is_preprocessed:
-                self.data.var_names_make_unique()
-                self.data.layers["counts"] = self.data.X.copy()
-                pre = Preprocessing(self.data)
-                # RNA preprocessing
-                if self.modality=="rna":
-                    self.data = pre.rna_preprocessing()
-                # ATAC preprocessing
-                elif self.modality=="atac":
-                    self.data = pre.atac_preprocessing()
-                # ADT preprocessing
-                elif self.modality=="adt":
-                    self.data = pre.adt_preprocessing()
-                # Not applicable
-                else:
-                    raise ValueError("Preprocessing for this modality is not applicable!")
+        if self.file_path != "":
+            if self.modality != "" :
+                self.read_anndata()
+                if not self.is_preprocessed:
+                    self.data.var_names_make_unique()
+                    self.data.layers["counts"] = self.data.X.copy()
+                    pre = Preprocessing(anndata=self.data, config_path=self.config_path)
+                    # RNA preprocessing
+                    if self.modality=="rna":
+                        self.data = pre.rna_preprocessing()
+                    # ATAC preprocessing
+                    elif self.modality=="atac":
+                        self.data = pre.atac_preprocessing()
+                    # ADT preprocessing
+                    elif self.modality=="adt":
+                        self.data = pre.adt_preprocessing()
+                    # Not applicable
+                    else:
+                        raise ValueError("Preprocessing for this modality is not applicable!")
+            else:
+                # If there is no modality
+                self.read_mudata()
         else:
-            raise ValueError("Modality and file_path must be provided to read anndata")
+            raise ValueError("File_path must be provided to read anndata")
         return self.data
 
 

@@ -52,14 +52,14 @@ class ModelFactory:
 class PCA_Model(ModelFactory):
     """PCA implementation"""
 
-    def __init__(self, dataset: ad.AnnData, dataset_name):
+    def __init__(self, dataset: ad.AnnData, dataset_name, config_path: str="./config.json"):
         """
         Initialize the PCA model with the specified parameters.
         Input data is AnnData object that was concatenated of multiple modality
         """
         print("Initializing PCA Model")
 
-        super().__init__(dataset, dataset_name, model_name="pca")
+        super().__init__(dataset, dataset_name, config_path=config_path,model_name="pca")
         pca_params= self.model_params.get(self.model_name)
 
         # PCA parameters from config file
@@ -143,14 +143,14 @@ class MOFA_Model(ModelFactory):
     """MOFA+ Model implementation"""
     mu.set_options(display_style = "html", display_html_expand = 0b000)
 
-    def __init__(self, dataset: md.MuData, dataset_name):
+    def __init__(self, dataset: md.MuData, dataset_name, config_path: str="./config.json"):
         """
         Initialize the MOFA model with the specified parameters.
         Input data is MuData object that contains multiple modality
         """
         print("Initializing MOFA+ Model")
         
-        super().__init__(dataset, dataset_name, model_name="mofa+")
+        super().__init__(dataset, dataset_name, config_path=config_path, model_name="mofa+")
         mofa_params= self.model_params.get(self.model_name)
 
         # MOFA+ parameters from config file
@@ -261,14 +261,14 @@ class MOFA_Model(ModelFactory):
 class MultiVI_Model(ModelFactory):
     """MultiVI Model implementation."""
     
-    def __init__(self, dataset: ad.AnnData, dataset_name):
+    def __init__(self, dataset: ad.AnnData, dataset_name, config_path: str="./config.json"):
         """
         Initialize the MultiVi model with the specified parameters.
         Input data is AnnData object that was concatenated of multiple modality
         """
         print("Initializing MultiVI Model")
 
-        super().__init__(dataset, dataset_name, model_name="multivi")
+        super().__init__(dataset, dataset_name, config_path=config_path, model_name="multivi")
         multivi_params= self.model_params.get(self.model_name)
 
         # Multivi parameters from config file
@@ -361,7 +361,7 @@ class MultiVI_Model(ModelFactory):
 class Mowgli_Model(ModelFactory):
     """Mowgli model implementation."""
     
-    def __init__(self, dataset, dataset_name):
+    def __init__(self, dataset, dataset_name, config_path: str="./config.json"):
         """Initialize the Mowgli model with the specified parameters."""
 
         print("Initializing Mowgli Model")
