@@ -10,14 +10,8 @@ class Trainer:
         Initializes the Trainer class.
         model is an object from one model class in model.py
         """
-        # Data information from config file
-        self.config_path=config_path
+        self.config_path = config_path
         self.config = load_config(config_path=config_path)
-        self.data_info = self.config.get("data")
-        self.dataset_path = self.data_info.get("data_path")
-        self.dataset_name = self.data_info.get("dataset_name")
-        self.modality_list = [key for key in self.data_info.keys() if key != "data_path" and key != "dataset_name"]
-        self.data=None
 
         # Model information from config file
         self.model_info = self.config.get("model")
@@ -25,33 +19,45 @@ class Trainer:
         self.model_available = [key for key in self.model_info.keys() if key not in excluded_keys]
         self.models=None
 
-    def load_dataset(self):
-        """
-        Load dataset to model as list of AnnDatas or one MuData
-        self.modalities=['rna', 'atac']
-        """
-        list_modality=self.modality_list
-        list_anndata=[]
-        if list_modality != None:
-            for i, modality in enumerate(list_modality):
-                # Load modality info from config
-                mod_info = self.data_info.get(modality)
-                filename=mod_info.get("file_name")
-                filepath = os.path.join(self.dataset_path, filename)
-                is_preprocess=mod_info.get("is_preprocessed")
+        # Data information from config file
+        self.data_config = self.config.get("data")
+        self.dataset_names = [
+            key for key, value in self.data_config.items()
+            if isinstance(value, dict) and "data_path" in value
+        ]
+        print("Number of Detected Datasets:", self.dataset_names)
 
-                # Load anndatas
-                ann = DataLoader(file_path=filepath, modality=modality, isProcessed=is_preprocess, config_path=self.config_path).preprocessing()
+
+    def load_datasets(self):
+        """
+        Load all datasets specified in the configuration.
+        Returns a dictionary where keys are dataset names, and values are the data objects.
+        """
+        datasets = {}
+        for dataset_name in self.dataset_names:
+            dataset_info = self.data_config[dataset_name]
+            modality_list = [
+                key for key in dataset_info.keys()
+                if key not in ["data_path", "dataset_name"]
+            ]
+            dataset_path = dataset_info["data_path"]
+            list_anndata = []
+            for modality in modality_list:
+                modality_info = dataset_info[modality]
+                file_path = os.path.join(dataset_path, modality_info["file_name"])
+                is_preprocessed = modality_info["is_preprocessed"]
+                ann = DataLoader(
+                    file_path=file_path,
+                    modality=modality,
+                    isProcessed=is_preprocessed,
+                    config_path=self.config_path,
+                ).preprocessing()
                 list_anndata.append(ann)
-            return list_modality, list_anndata
-        else:
-            # If dataset is only one MuData
-            filename = self.data_info.get("file_name")
-            filepath = os.path.join(self.dataset_path, filename)
-            is_preprocess = self.data_info.get("is_preprocessed")
-            mu = DataLoader(file_path=filepath, isProcessed=is_preprocess, config_path=self.config_path).read_mudata()
-            self.data = mu
-            return self.data
+            datasets[dataset_name] = {
+                "modalities": modality_list,
+                "data": list_anndata
+            }
+        return datasets
     
     def dataset_select(self, data_type: str = ""):
         """
@@ -74,25 +80,30 @@ class Trainer:
             raise ValueError("Only accept datatype of concatenate or mudata.")
         return self.data
     
-    def model_select(self):
-        models = {} # Use a dictionary to store models
+    def model_select(self, dataset_name, dataset_data):
+        """
+        Initialize models for a specific dataset.
+        """
+        models = {}
+        modalities = dataset_data["modalities"]
+        list_anndata = dataset_data["data"]
+        dataloader = DataLoader(config_path=self.config_path)
+        data_concat = dataloader.anndata_concatenate(list_anndata=list_anndata, list_modality=modalities)
+        data_mudata = dataloader.fuse_mudata(list_anndata=list_anndata, list_modality=modalities)
+
         for model_name in self.model_available:
             if model_name == "pca" and self.model_info["is_pca"]:
                 # PCA use concatenated AnnData object
-                data_pca = self.dataset_select(data_type="concatenate")
-                models[model_name]=PCA_Model(dataset=data_pca, dataset_name=self.dataset_name, config_path=self.config_path)
+                models[model_name]=PCA_Model(dataset=data_concat, dataset_name=dataset_name, config_path=self.config_path)
             if model_name == "mofa+" and self.model_info["is_mofa+"]:
                 # MOFA+ use MuData object
-                data_mofa = self.dataset_select(data_type="mudata")
-                models[model_name]=MOFA_Model(dataset=data_mofa, dataset_name=self.dataset_name, config_path=self.config_path)
+                models[model_name]=MOFA_Model(dataset=data_mudata, dataset_name=dataset_name, config_path=self.config_path)
             if model_name == "multivi" and self.model_info["is_multivi"]:
                 # Multivi use concatenated AnnData object
-                data_multivi = self.dataset_select(data_type="concatenate")
-                models[model_name]=MultiVI_Model(dataset=data_multivi, dataset_name=self.dataset_name, config_path=self.config_path)
+                models[model_name]=MultiVI_Model(dataset=data_concat, dataset_name=dataset_name, config_path=self.config_path)
             if model_name == "mowgli" and self.model_info["is_mowgli"]:
                 # Mowgli use MuData object
-                data_mowgli = self.dataset_select(data_type="mudata")
-                models[model_name]=Mowgli_Model(dataset=data_mowgli, dataset_name=self.dataset_name, config_path=self.config_path)
+                models[model_name]=Mowgli_Model(dataset=data_mudata, dataset_name=dataset_name, config_path=self.config_path)
 
         self.models = models
         return self.models
