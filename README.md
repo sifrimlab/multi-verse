@@ -8,17 +8,12 @@
 
 <!-- PROJECT LOGO -->
 <br />
-<p align="center">
- <!-- <img src="" alt="logo" align="center"> -->![Logo](./logo.png)
-
   <h3 align="center"> Multi-verse</h3>
 
   <p align="center">
     A package for comparing MOFA, MOWGLI, MultiVI, and PCA on multimodal datasets, providing scIB metrics and UMAP visualizations.
-
-    <br />
-    <a href="https://github.com/sifrimlab/multi-verse/issues">Report Bug</a>
-    ·
+  <p>
+    <a href="https://github.com/sifrimlab/multi-verse/issues">Report Bug</a> ·
     <a href="https://github.com/sifrimlab/multi-verse/pulls">Add Feature</a>
   </p>
 </p>
