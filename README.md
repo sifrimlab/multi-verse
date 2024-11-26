@@ -9,7 +9,8 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
- <!-- <img src="" alt="logo" align="center"> -->![alt text](image.png)
+ <!-- <img src="" alt="logo" align="center"> -->![Logo](./logo.png)
+
   <h3 align="center"> Multi-verse</h3>
 
   <p align="center">
