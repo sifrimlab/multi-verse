@@ -9,7 +9,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
- <!-- <img src="" alt="logo" align="center"> -->
+ <!-- <img src="" alt="logo" align="center"> -->![alt text](image.png)
   <h3 align="center"> Multi-verse</h3>
 
   <p align="center">
@@ -53,7 +53,7 @@
 Multi-verse is a Python package designed to facilitate the comparison of multimodal data integration methods, specifically MOFA, MOWGLI, MultiVI, and PCA. By leveraging scIB metrics and generating UMAP visualizations, this package enables researchers to assess and visualize the performance of these methods on their datasets.
 
 Key features:
-- Supports comparison of four major methods: [MOFA](https://biofam.github.io/MOFA2/), [MOWGLI](https://mowgli.readthedocs.io/en/latest/index.html), [MultiVI](https://docs.scvi-tools.org/en/1.2.0/user_guide/models/multivi.html), and PCA.
+- Supports comparison of four major methods: [MOFA+](https://biofam.github.io/MOFA2/), [Mowgli](https://mowgli.readthedocs.io/en/latest/index.html), [MultiVI](https://docs.scvi-tools.org/en/1.2.0/user_guide/models/multivi.html), and PCA.
 - Provides scIB metrics for integration performance evaluation.
 - Generates UMAP visualizations for easy interpretation of results.
 
