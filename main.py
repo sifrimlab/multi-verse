@@ -1,37 +1,45 @@
-from config import load_config
-from dataloader import DataLoader
-from model import PCA_Model, MOFA_Model, Mowgli_Model, MultiVI_Model
+import sys
+import os
+import torch
+torch.cuda.is_available()
+
 from train import Trainer
 
 
-class Main:
-    """
-    please input directory and filename for your dataset
-    please choose model by setting "is_model"=true or false
-    """
-    def __init__(self) -> None:
-        pass
+def main():
+    # Check if a config file is provided as a command-line argument
+    if len(sys.argv) != 2:
+        print("Usage: python main.py <config_file.json>")
+        sys.exit(1)
 
-    def run():
-        if load_config()["training"]["pca"]["is_pca"]==True:
-            pca=PCA_Model()
-            trainer=Trainer(pca)
-            trainer.train()
-        if load_config["training"]["mofa+"]["is_mofa+"]==True:
-            mofa=MOFA_Model()
-            train=Trainer(mofa)
-            trainer.train()
-        if load_config["training"]["mowgli"]["is_mowgli"] ==True:
-            mowgli=Mowgli_Model()
-            trainer=Trainer(mowgli)
-            trainer.train()
-        if load_config["training"]["multivi"]["is_multivi"]==True:
-            multivi=MultiVI_Model()
-            trainer=Trainer(multivi)
-            trainer.train()
+    config_file = sys.argv[1]
 
-    
+    # Verify if the provided file exists
+    if not os.path.exists(config_file):
+        print(f"Error: Configuration file '{config_file}' not found.")
+        sys.exit(1)
+
+    print(f"Using configuration file: {config_file}")
+
+    # Initialize the Trainer with the provided config file
+    my_trainer = Trainer(config_path=config_file)
+
+    # Load all datasets
+    datasets = my_trainer.load_datasets()
+
+    # Iterate over datasets
+    for dataset_name, dataset_data in datasets.items():
+        print(f"\n=== Processing dataset: {dataset_name} ===")
+        
+        # Select models for this dataset
+        models = my_trainer.model_select(dataset_name, dataset_data)
+        print(f"Loaded models for {dataset_name}: {models.keys()}")
+        
+        # Train each model
+        for model_name, model in models.items():
+            print(f"\nTraining model: {model_name} for dataset: {dataset_name}")
+            model.train()
+            model.umap()  # Perform UMAP visualization if needed
 
 if __name__ == "__main__":
-    main = Main()
-    main.run()
+    main()

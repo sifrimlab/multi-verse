@@ -7,16 +7,42 @@
 [![MIT Liscence][license-shield]][license-url]
 
 <!-- PROJECT LOGO -->
-<br />
+<!-- <br />
   <h3 align="center"> Multi-verse</h3>
 
   <p align="center">
     A package for comparing MOFA, MOWGLI, MultiVI, and PCA on multimodal datasets, providing scIB metrics and UMAP visualizations.
+
   <p>
     <a href="https://github.com/sifrimlab/multi-verse/issues">Report Bug</a> ·
     <a href="https://github.com/sifrimlab/multi-verse/pulls">Add Feature</a>
   </p>
-</p>
+</p> -->
+
+<p align="center">
+
+<div style="display: flex; align-items: center;">
+  <!-- Image on the left -->
+  <div>
+    <img src="logo.png" alt="Logo" style="width: 200px; height: auto; margin-right: 20px;">
+    <!-- Attribution directly under the logo -->
+    <p style="font-size: 8px; text-align: left; margin-top: 5px;">
+      Logo generated with the help of ChatGPT.
+    </p>
+  </div>
+
+  <!-- Title and description on the right -->
+  <div>
+    <h3>Multi-verse</h3>
+    <p>
+      A package for comparing MOFA, MOWGLI, MultiVI, and PCA on multimodal datasets, providing scIB metrics and UMAP visualizations.
+    </p>
+    <p>
+      <a href="https://github.com/sifrimlab/multi-verse/issues">Report Bug</a> ·
+      <a href="https://github.com/sifrimlab/multi-verse/pulls">Add Feature</a>
+    </p>
+  </div>
+</div>
 
 
 <!-- TABLE OF CONTENTS -->
@@ -102,6 +128,7 @@ Any contributions you make are **greatly appreciated**.
 ## License
 
 Distributed under the GPL-3 License. See `LICENSE` for more information.
+
 
 
 <!-- CONTACT -->
