@@ -104,6 +104,7 @@ class PCA_Model(ModelFactory):
         self.latent = self.dataset.obsm["X_pca"]
 
         print(f"PCA completed with {self.n_components} components")
+        print("Training completed.")
 
     def save_latent(self):
         """Save the PCA latent representations."""
@@ -197,6 +198,7 @@ class MOFA_Model(ModelFactory):
             mu.tl.mofa(data=self.dataset, n_factors=self.n_factors, 
                        outfile=outfilepath, gpu_mode=self.gpu_mode)
             print(f"Model saved at: {outfilepath}")
+            print("Training completed.")
         except Exception as e:
             print(f"Error during training: {e}")
             raise
@@ -211,7 +213,7 @@ class MOFA_Model(ModelFactory):
             
             # Ensure the necessary embeddings and factors are in the dataset
             X_mofa = self.dataset.obsm["X_mofa"]
-            LFs_mofa = self.dataset.varm["LFs_mofa"]
+            LFs_mofa = self.dataset.varm["LFs"]
             
             # Create an AnnData object to store the data
             adata = sc.AnnData(X=X_mofa, var=LFs_mofa)
@@ -229,7 +231,6 @@ class MOFA_Model(ModelFactory):
         except Exception as e:
             print(f"Error saving latent embeddings to .h5ad: {e}")
             raise
-
 
     def load_latent(self):
         """Load latent data from saved .h5ad files."""
@@ -259,7 +260,6 @@ class MOFA_Model(ModelFactory):
         else:
             print(f"File not found: {self.latent_filepath}")
             raise FileNotFoundError(f"The file {self.latent_filepath} does not exist.")
-
 
     def umap(self):
         """Generate UMAP visualization."""
@@ -303,6 +303,13 @@ class MultiVI_Model(ModelFactory):
         self.output_dir = os.path.join(self.outdir, "multivi_output")
         os.makedirs(self.output_dir, exist_ok=True)
         
+        print('Data columns before training', self.dataset.var.columns)
+
+        print(self.dataset)
+        print(self.dataset.obs)
+        if 'feature_types' not in self.dataset.obs:    
+            print(f"Warning: feature_types not found in dataset.")
+
         # Set up data for MultiVI model
         self.dataset = self.dataset[:, self.dataset.var["feature_types"].argsort()].copy()
         scvi.model.MULTIVI.setup_anndata(self.dataset, protein_expression_obsm_key=self.protein_expression)
@@ -311,8 +318,7 @@ class MultiVI_Model(ModelFactory):
             n_genes=(self.dataset.var["feature_types"] == "Gene Expression").sum(),
             n_regions=(self.dataset.var["feature_types"] == "Peaks").sum(),
             )
-
-            
+           
     def to(self):
         """
         Method to set GPU or CPU mode for MOFA+.
@@ -326,13 +332,18 @@ class MultiVI_Model(ModelFactory):
         
     def train(self):
         print("Training MultiVI Model")
+        print('Data columns before training', self.dataset.var.columns)
+
         try:
             self.to()
             self.model.train()
             self.dataset.obsm[self.latent_key] = self.model.get_latent_representation()
+            print("Training completed.")
         except Exception as e:
             print(f"Error during training: {e}")
             raise
+        
+        print('Data columns after training', self.dataset.var.columns)
 
     def save_latent(self):
         """Save latent data generated with the MultiVI model."""
@@ -413,8 +424,7 @@ class Mowgli_Model(ModelFactory):
         """
         try:
             print(f"Moving Mowgli model to {self.device}")
-            torch_device = torch.device(self.device)
-            self.model.to_device(self.device)
+            self.device = torch.device(self.device)
             print(f"Mowgli model successfully moved to {self.device}")
         except Exception as e:
             print(f"Invalid device '{self.device}' specified. Use 'cpu' or 'gpu'.")
@@ -431,39 +441,60 @@ class Mowgli_Model(ModelFactory):
                 lr=self.learning_rate,
                 tol_inner=1e-5
             )
+            print("Training completed.")
+
+            # Check if W is stored in the dataset after training
+            # print("Dataset obsm keys after training:", self.dataset.obsm.keys())
+            # print("Shape of dataset embeddings (if found):", self.dataset.obsm.get("W_OT", "Not Found").shape)
+   
+            # Debug: Check the shape of W
+            # if hasattr(self.model, "W"):
+            #     print("Shape of self.model.W:", self.model.W.shape)
+            # else:
+            #     raise ValueError("self.model.W is not defined after training.")
+
+            # Transpose the embeddings if needed
+            if self.model.W.shape[0] == self.latent_dimensions and self.model.W.shape[1] == self.dataset.n_obs:
+                W_corrected = self.model.W.T  # Transpose to match (n_obs, latent_dimensions)
+                # print("Transposed embeddings shape:", W_corrected.shape)
+            else:
+                W_corrected = self.model.W  # Use directly if the shape is already correct
+
+            # Convert Torch Tensor to NumPy Array
+            if isinstance(W_corrected, torch.Tensor):
+                W_corrected = W_corrected.cpu().numpy()  # Convert to NumPy array (move to CPU if needed)
+
+            # Assign embeddings to obsm
+            if W_corrected.shape[0] == self.dataset.n_obs and W_corrected.shape[1] == self.latent_dimensions:
+                self.dataset.obsm["W_OT"] = W_corrected
+                # print("Assigned embeddings to W_OT:", self.dataset.obsm["W_OT"].shape)
+            else:
+                raise ValueError(
+                    f"Embeddings shape mismatch after transpose: Expected ({self.dataset.n_obs}, {self.latent_dimensions}), "
+                    f"but got {W_corrected.shape}."
+                )
+
+            # print("Overall Loss:", self.model.losses)
+
         except Exception as e:
             print(f"Error during training: {e}")
             raise
 
-    def evaluate(self):
-        """Evaluate the Mowgli model."""
-        print("Evaluating Mowgli Model")
-        # Add evaluation logic here (e.g., metrics calculation)
-        raise NotImplementedError("Evaluation method not implemented yet.")
-
     def save_latent(self):
         """Save latent data generated with the Mowgli model in .h5ad format."""
         print("Saving latent data")
+
+        # Create AnnData object to store embeddings and losses
+        adata = sc.AnnData(X=self.dataset.obsm["W_OT"])  # W_OT contains embeddings
+        adata.uns["loss_overall"] = self.model.losses  # Save overall loss
+        adata.uns["loss_w"] = self.model.losses_w  # Save W-specific loss
+        adata.uns["loss_h"] = self.model.losses_h  # Save H-specific loss
         
-        # Prepare the latent data for saving
-        W = self.dataset.obsm["W_OT"]
-        H = {f"H_{mod}": self.dataset[mod].uns["H_OT"] for mod in self.dataset.mod}
-        losses = {
-            "loss_overall": self.model.losses,
-            "loss_w": self.model.losses_w,
-            "loss_h": self.model.losses_h
-        }
-        
-        # Create an AnnData object to store the data
-        adata = sc.AnnData(X=W)  # W is the main data matrix (e.g., cells x latent dimensions)
-        
-        # Add H_ matrices (for each modality) into .uns
-        for mod, h_matrix in H.items():
-            adata.uns[mod] = h_matrix
-        
-        # Add losses to .uns
-        adata.uns.update(losses)
-        
+        # Add modality-specific H_ matrices to the AnnData object
+        for mod in self.dataset.mod:
+            if f"H_OT" in self.dataset[mod].uns:
+                adata.uns[f"H_{mod}"] = self.dataset[mod].uns["H_OT"]
+            
         # Define the output path for the saved .h5ad file
         output_path = os.path.join(self.output_dir, f"mowgli_latent_{self.dataset_name}.h5ad")
         self.latent_filepath = output_path
@@ -511,21 +542,34 @@ class Mowgli_Model(ModelFactory):
         """Generate UMAP visualization."""
         print("Generating UMAP plot")
         try:
+            self.dataset.uns = {}
+            # Load and assign embeddings for visualization
+            # Ensure embeddings exist
+            if "W_OT" not in self.dataset.obsm:
+                raise ValueError("Embeddings not found in obsm['W_OT']. Run train() first.")
+
+            # Assign embeddings for visualization
+            self.dataset.obsm["X_mowgli"] = self.dataset.obsm["W_OT"]
+
+            # Set Scanpy figure directory
+            sc.settings.figdir = self.output_dir
+
+            # UMAP
             sc.pp.neighbors(self.dataset, use_rep="X_mowgli", n_neighbors=self.umap_num_neighbors)
             sc.tl.umap(self.dataset)
-            sc.pl.umap(self.dataset, size=self.umap_size, alpha=self.umap_alpha)
-        
-            # If filename is not provided, use default that includes self.dataset_name
-            umap_filename = os.path.join(self.output_dir, f"mowgli_{self.dataset_name}_umap_plot.png")
-        
-            # Save the plot
-            plt.savefig(os.path.join(self.output_dir, umap_filename))
-            plt.close()
-        
-            print(f"A UMAP plot for Mowgli model with dataset {self.dataset_name} was successfully" \
-                  f"generated and saved as {umap_filename}")
+            umap_plot_path = f"mowgli_{self.dataset_name}_umap_plot.png"
+            sc.pl.umap(self.dataset, size=self.umap_size, alpha=self.umap_alpha, save=umap_plot_path)
+            print(f"UMAP plot saved to {os.path.join(self.output_dir, umap_plot_path)}")
+
+
+            # Leiden clustering
+            sc.tl.leiden(self.dataset)
+            leiden_plot_path = f"mowgli_{self.dataset_name}_leiden_plot.png"
+            sc.pl.embedding(self.dataset, "X_umap", color=['leiden'], save=leiden_plot_path)
+            print(f"Leiden plot saved to {os.path.join(self.output_dir, leiden_plot_path)}")
+
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")
-
-
+            raise
+      

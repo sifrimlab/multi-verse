@@ -37,9 +37,14 @@ def main():
         
         # Train each model
         for model_name, model in models.items():
-            print(f"\nTraining model: {model_name} for dataset: {dataset_name}")
-            model.train()
-            model.umap()  # Perform UMAP visualization if needed
+            try:
+                print(f"\nTraining model: {model_name} for dataset: {dataset_name}")
+                model.train()
+                model.umap()  # Perform UMAP visualization if needed
+            except Exception as e:
+                print(f"Error while processing model '{model_name}' for dataset '{dataset_name}': {e}")
+                # Continue to the next model or dataset
+                continue
 
 if __name__ == "__main__":
     main()
