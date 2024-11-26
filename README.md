@@ -13,7 +13,8 @@
   <h3 align="center"> Multi-verse</h3>
 
   <p align="center">
-    <br />
+    A package for comparing MOFA, MOWGLI, MultiVI, and PCA on multimodal datasets, providing scIB metrics and UMAP visualizations.
+
     <br />
     <a href="https://github.com/sifrimlab/multi-verse/issues">Report Bug</a>
     ·
@@ -49,6 +50,13 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
+Multi-verse is a Python package designed to facilitate the comparison of multimodal data integration methods, specifically MOFA, MOWGLI, MultiVI, and PCA. By leveraging scIB metrics and generating UMAP visualizations, this package enables researchers to assess and visualize the performance of these methods on their datasets.
+
+Key features:
+- Supports comparison of four major methods: MOFA, MOWGLI, MultiVI, and PCA.
+- Provides scIB metrics for integration performance evaluation.
+- Generates UMAP visualizations for easy interpretation of results.
+
 <!-- GETTING STARTED -->
 ## Getting Started
 
@@ -60,9 +68,25 @@ It is recommended to create a new virtual enviroment with [conda](https://www.an
 
 ### Installation
 
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/sifrimlab/multi-verse.git
+   cd multi-verse
+   ```
 
-<!-- USAGE EXAMPLES -->
+2. Create a new conda environment:
+    ```bash
+    conda env create -f environment.yml
+    conda activate multi_verse
+    ```
+
 ## Usage
+1. To run the script, provide a configuration JSON file as an argument. The configuration file should include all necessary settings for the methods and metrics you want to compare. See config.json for example structure.
+
+2. Run the code:
+    ```bash
+    python main.py config.json
+    ```
 
 
 <!-- CONTRIBUTING -->
@@ -86,8 +110,7 @@ Distributed under the GPL-3 License. See `LICENSE` for more information.
 
 <!-- CONTACT -->
 ## Contact
-
-
+Project Link: https://github.com/sifrimlab/multi-verse
 
 
 <!-- MARKDOWN LINKS & IMAGES -->

@@ -109,7 +109,13 @@ class DataLoader:
                     pass
 
         self.data = mu.MuData(data_dict)
-        self.data.obs["cell_type"] = self.data["rna"].obs["cell_type"]
+
+        if "cell_type" in self.data["rna"].obs:
+            self.data.obs["cell_type"] = self.data["rna"].obs["cell_type"]
+        else:
+            print("Warning: 'cell_type' not found in RNA modality during concatenation.")
+
+        # self.data.obs["cell_type"] = self.data["rna"].obs["cell_type"]
         mu.pp.intersect_obs(self.data)   # Make sure number of cells are the same for all modalities
         return self.data
 
@@ -123,7 +129,10 @@ class DataLoader:
             list_ann.append(mudata[mod])
 
         anndata = ad.concat(list_ann, axis="var")
-        anndata.obs["cell_type"] = mudata["rna"].obs["cell_type"]
+        if "cell_type" in self.data["rna"].obs:
+            anndata.obs["cell_type"] = mudata["rna"].obs["cell_type"]
+        else:
+            print("Warning: 'cell_type' not found in RNA modality during concatenation.")
         num_obs = anndata.n_obs
         anndata.obs["modality"] = np.zeros(num_obs, dtype=int)
         self.data = anndata
