@@ -361,7 +361,6 @@ class MultiVI_Model(ModelFactory):
             print(f"Error generating UMAP: {e}")
 
 
-
 class Mowgli_Model(ModelFactory):
     """Mowgli model implementation."""
     
@@ -540,4 +539,3 @@ class Mowgli_Model(ModelFactory):
         except Exception as e:
             print(f"Error generating UMAP: {e}")
             raise
-      
