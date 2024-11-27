@@ -31,8 +31,7 @@ def main():
     # Load all datasets
     datasets = my_trainer.load_datasets()
 
-    selected_models = my_trainer.model_select(datasets)  # Assuming `selected_models` is now a dict with dataset_name as keys
-
+    selected_models = my_trainer.model_select(datasets)  
 
     # Iterate over datasets and their respective models
     for dataset_name, dataset_data in datasets.items():
