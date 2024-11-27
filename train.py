@@ -37,87 +37,133 @@ class Trainer:
         for dataset_name in self.dataset_names:
             dataset_info = self.data_config[dataset_name]
             modality_list = [
-                key for key in dataset_info.keys()
-                if key not in ["data_path", "dataset_name"]
+                key for key, value in dataset_info.items()
+                if isinstance(value, dict) and "file_name" in value # modality (i.e.'rna') must be a dictionary
             ]
             dataset_path = dataset_info["data_path"]
             list_anndata = []
-            for modality in modality_list:
-                modality_info = dataset_info[modality]
-                file_path = os.path.join(dataset_path, modality_info["file_name"])
-                is_preprocessed = modality_info["is_preprocessed"]
-                ann = DataLoader(
-                    file_path=file_path,
-                    modality=modality,
-                    isProcessed=is_preprocessed,
-                    config_path=self.config_path,
-                ).preprocessing()
-                list_anndata.append(ann)
-            datasets[dataset_name] = {
-                "modalities": modality_list,
-                "data": list_anndata
-            }
-        return datasets
+            # Assume there will be no modality when loading Prostate data, since loading separated modality will lose annotation metadata of this dataset
+            if modality_list != None:
+                for modality in modality_list:
+                    modality_info = dataset_info[modality]
+                    file_path = os.path.join(dataset_path, modality_info["file_name"])
+                    is_preprocessed = modality_info["is_preprocessed"]
+                    annotation = modality_info["annotation"]
+                    ann_loader = DataLoader(
+                        file_path=file_path,
+                        modality=modality,
+                        isProcessed=is_preprocessed,
+                        annotation= annotation,
+                        config_path=self.config_path,
+                    )
+                    ann =ann_loader.preprocessing()
+                    list_anndata.append(ann)
+                datasets[dataset_name] = {
+                    "modalities": modality_list,
+                    "data": list_anndata
+                }
+            else: 
+                # This for loading Prostate data as whole MuData object
+                file_path = os.path.join(dataset_path, dataset_info["file_name"])
+                is_preprocessed = dataset_info["is_preprocessed"]
+                annotation = dataset_info["annotation"]
+                prostate = DataLoader(file_path=file_path,
+                                      isProcessed=is_preprocessed,
+                                      annotation= annotation,
+                                      config_path=self.config_path,
+                                      ).read_mudata()
+                datasets[dataset_name] = {
+                    "data": prostate
+                }
+        self.data = datasets
+        return self.data
     
-    def dataset_select(self, data_type: str = ""):
+    def dataset_select(self, datasets_dict, data_type: str = ""):
         """
-        Concatenate list of AnnDatas or Fuse list of AnnDatas into one MuData or Load one MuData
-        self.modalities=['rna', 'atac']
+        Concatenate list of AnnDatas or Fuse list of AnnDatas into one MuData
         """
         dataloader = DataLoader(config_path=self.config_path)
-        if data_type=="concatenate":
-            list_modality, list_anndata = self.load_dataset()
-            data_concat = dataloader.anndata_concatenate(list_anndata=list_anndata, list_modality=list_modality)
-            self.data = data_concat
-        elif data_type=="mudata":
-            if self.modality_list != None:
-                list_modality, list_anndata = self.load_dataset()
-                data_fuse = dataloader.fuse_mudata(list_anndata=list_anndata, list_modality=list_modality)
-                self.data = data_fuse
-            else:
-                self.load_dataset()
+        datasets = datasets_dict
+
+        if data_type=="concatenate": # Process input object for PCA and MultiVI
+            concatenate = {}
+            for dataset_name, dataset_data in datasets.items():
+                print(f"\n=== Concatenating dataset: {dataset_name} ===")
+                modalities = dataset_data["modalities"]
+                if modalities != None: # Either pbmck_10k or TEA dataset, prostate data is assumed to be loaded as whole (no modalities)
+                    list_anndata = dataset_data["data"]
+                    data_concat = dataloader.anndata_concatenate(list_anndata=list_anndata, list_modality=modalities)
+                    concatenate[dataset_name] = data_concat
+                else:
+                    # If loaded data is Prostate MuData (no modality)
+                    prostate = dataset_data["data"]
+                    list_anndata = list(prostate.mod.values())
+                    modalities = list(prostate.mod.keys())
+                    data_concat = dataloader.anndata_concatenate(list_anndata=list_anndata, list_modality=modalities)
+                    # Hard-code annotation of prostate
+                    data_concat.obs["new_ann"] = prostate.obs["new_ann"] 
+                    concatenate[dataset_name] = data_concat
+            self.data = concatenate
+        elif data_type =="mudata":   # Process input object for MOFA+ and Mowgli
+            mudata_input = {}
+            for dataset_name, dataset_data in datasets.items():
+                print(f"\n=== Fusing dataset as MuData object: {dataset_name} ===")
+                modalities = dataset_data["modalities"]
+                if modalities != None:
+                    list_anndata = dataset_data["data"]
+                    data_fuse = dataloader.fuse_mudata(list_anndata=list_anndata, list_modality=modalities)
+                    mudata_input[dataset_name] = data_fuse
+                else:
+                    # If loaded data is Prostate MuData (no modality)
+                    prostate = dataset_data["data"]
+                    mudata_input[dataset_name] = prostate
+            self.data = mudata_input
         else:
             raise ValueError("Only accept datatype of concatenate or mudata.")
         return self.data
     
-    def model_select(self, dataset_name, dataset_data):
+    def model_select(self, dataset_dict):
         """
         Initialize models for a specific dataset.
         """
-        models = {}
-        modalities = dataset_data["modalities"]
-        list_anndata = dataset_data["data"]
-        dataloader = DataLoader(config_path=self.config_path)
-        data_concat = dataloader.anndata_concatenate(list_anndata=list_anndata, list_modality=modalities)
-        data_mudata = dataloader.fuse_mudata(list_anndata=list_anndata, list_modality=modalities)
+        datasets = dataset_dict          # dataset dictionary after load_datasets()
+        data_concat = self.dataset_select(datasets_dict=datasets, data_type="concatenate")
+        data_mudata = self.dataset_select(datasets_dict=datasets, data_type="mudata")
+        models_for_data = {}
 
-        for model_name in self.model_available:
-            if model_name == "pca" and self.model_info["is_pca"]:
-                # PCA use concatenated AnnData object
-                models[model_name]=PCA_Model(dataset=data_concat, dataset_name=dataset_name, config_path=self.config_path)
-            if model_name == "mofa+" and self.model_info["is_mofa+"]:
-                # MOFA+ use MuData object
-                models[model_name]=MOFA_Model(dataset=data_mudata, dataset_name=dataset_name, config_path=self.config_path)
-            if model_name == "multivi" and self.model_info["is_multivi"]:
-                # Multivi use concatenated AnnData object
-                models[model_name]=MultiVI_Model(dataset=data_concat, dataset_name=dataset_name, config_path=self.config_path)
-            if model_name == "mowgli" and self.model_info["is_mowgli"]:
-                # Mowgli use MuData object
-                models[model_name]=Mowgli_Model(dataset=data_mudata, dataset_name=dataset_name, config_path=self.config_path)
+        for dataset_name in self.dataset_names:
+            models = {}
+            if self.model_info["is_pca"]:
+                pca = PCA_Model(dataset=data_concat[dataset_name], dataset_name=dataset_name, config_path=self.config_path)
+                models["pca"] = pca
 
-        self.models = models
+            if self.model_info["is_multivi"]:
+                multivi = MultiVI_Model(dataset=data_concat[dataset_name], dataset_name=dataset_name, config_path=self.config_path)
+                models["multivi"] = multivi
+
+            if self.model_info["is_mofa+"]:
+                mofa = MOFA_Model(dataset=data_mudata[dataset_name], dataset_name=dataset_name, config_path=self.config_path)
+                models["mofa+"] = mofa
+
+            if self.model_info["is_mowgli"]:
+                mowgli = Mowgli_Model(dataset=data_mudata[dataset_name], dataset_name=dataset_name, config_path=self.config_path)
+                models["mowgli"] = mowgli
+
+            models_for_data[dataset_name] = models 
+        self.models = models_for_data
         return self.models
 
     def train(self):
         try:
-            if self.models ==None:
+            if self.models==None:
                 self.model_select()
 
-            for model_name, model in self.models.items():
-                model.train()
+            for dataset_name, model_dict in self.models.items():
+                print(f"\n=== Training for {dataset_name} ===")
+                for model_name, model in model_dict.items():
+                    print(f"\n=== {model_name} training ===")
+                    model.to()
+                    model.train()
+                    model.save_latent()
         except ValueError as e:
             print(f"Something is wrong in train() function: {e}")
-
-
-
-    

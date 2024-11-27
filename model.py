@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import os
 import torch
 import scvi
+import re
 
 from config import load_config 
 
@@ -65,21 +66,15 @@ class PCA_Model(ModelFactory):
         # PCA parameters from config file
         self.n_components = pca_params.get("n_components")
         self.device = pca_params.get("device")
-        if  self.device != 'cpu':
-            self.gpu_mode = True
-        else:
-            self.gpu_mode = False
+        self.gpu_mode = False # Cpu default mode
         self.umap_random_state = pca_params.get("umap_random_state")
-        self.umap_color_type = pca_params.get("umap_color_type")  # Default to 'cell_type' if not set
-
-        if self.umap_color_type not in self.dataset.obs:    
-            print(f"Warning: '{self.umap_color_type}' not found in dataset. Defaulting to None for coloring.")
-            self.umap_color_type = None  # Fallback to None if not found
+        self.umap_color_type = pca_params.get("umap_color_type")  # Default ass 'cell_type'
 
         # Output for PCA model is in ./outputs/pca_output
         self.output_dir = os.path.join(self.outdir, "pca_output")
+        self.latent_filepath = os.path.join(self.output_dir, f"pca_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
         os.makedirs(self.output_dir, exist_ok=True)
-
+        
         # For demonstration, we'll assume PCA is just a placeholder here
         # self.pca = PCA(n_components=self.n_components)
         print(f"PCA initialized with {self.dataset_name}, {self.n_components} components.")
@@ -103,17 +98,16 @@ class PCA_Model(ModelFactory):
         
         self.latent = self.dataset.obsm["X_pca"]
 
-        print(f"PCA completed with {self.n_components} components")
-        print("Training completed.")
+        print(f"Training PCA completed with {self.n_components} components")
 
     def save_latent(self):
         """Save the PCA latent representations."""
         print("Saving PCA latent embeddings")
-        output_path = os.path.join(self.output_dir, f"pca_{self.dataset_name}.h5ad")
-        self.dataset.write(output_path)
-        print(f"Latent data saved to {output_path}")
-        # Store the path for loading later (e.g., assign it to self.latent_filepath)
-        self.latent_filepath = output_path
+
+        # Modify AnnData object for scib evaluation
+        self.dataset.obs["batch"] = "batch_1"
+        self.dataset.write(self.latent_filepath)
+        print(f"Latent data saved to {self.latent_filepath}")
 
     def load_latent(self) -> ad.AnnData:
         """Load latent data from a saved file."""
@@ -160,23 +154,15 @@ class MOFA_Model(ModelFactory):
 
         # MOFA+ parameters from config file
         self.device = mofa_params.get("device")
-        if self.device !='cpu':
-            self.gpu_mode = False
-        else:
-            self.gpu_mode = True
+        self.device = False
         self.n_factors = mofa_params.get("n_factors")
         self.n_iteration = mofa_params.get("n_iteration")
         self.umap_random_state=mofa_params.get("umap_random_state")
-        self.umap_use_representation=mofa_params.get("umap_use_representation")
         self.umap_color_type=mofa_params.get("umap_color_type")
-
-        if self.umap_color_type not in self.dataset.obs:    
-            print(f"Warning: '{self.umap_color_type}' not found in dataset. Defaulting to None for coloring.")
-            self.umap_color_type = None  # Fallback to None if not found
-
 
         # Output for MOFA+ model is in ./outputs/mofa_output
         self.output_dir = os.path.join(self.outdir, "mofa_output")
+        self.latent_filepath = os.path.join(self.output_dir, f"mofa_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
         os.makedirs(self.output_dir, exist_ok=True)
 
         print(f"MOFA+ initialized with {self.dataset_name}, {self.n_factors} factors to be trained with.")
@@ -185,20 +171,20 @@ class MOFA_Model(ModelFactory):
         """
         Method to set GPU or CPU mode for MOFA+.
         """
-        self.gpu_mode = True
-        print(f"Switching to {self.device} mode")
+        if self.device !='cpu':
+            self.gpu_mode = True
+        else:
+            self.gpu_mode = False
+        print(f"Switching to {self.gpu_mode} mode")
 
     def train(self):
         """
         Train the MOFA model.
         """
         print("Training MOFA+ Model")
-        outfilepath = os.path.join(self.output_dir, f"mofa_{self.dataset_name}.hdf5")
         try:
-            mu.tl.mofa(data=self.dataset, n_factors=self.n_factors, 
-                       outfile=outfilepath, gpu_mode=self.gpu_mode)
-            print(f"Model saved at: {outfilepath}")
-            print("Training completed.")
+            mu.tl.mofa(data=self.dataset, n_factors=self.n_factors, gpu_mode=self.gpu_mode)
+            print(f"MOFA+ training completed with {self.n_factors} factors")
         except Exception as e:
             print(f"Error during training: {e}")
             raise
@@ -209,25 +195,23 @@ class MOFA_Model(ModelFactory):
         """
         try:
             # Save the latent embeddings to the dataset object
-            print("Saving latent embeddings as .h5ad file to dataset...")
-            
-            # Ensure the necessary embeddings and factors are in the dataset
-            X_mofa = self.dataset.obsm["X_mofa"]
-            LFs_mofa = self.dataset.varm["LFs"]
-            
-            # Create an AnnData object to store the data
-            adata = sc.AnnData(X=X_mofa, var=LFs_mofa)
-            adata.uns['latent_factors'] = LFs_mofa
-            
-            # Define the output path for the saved .h5ad file
-            output_path = os.path.join(self.output_dir, f"mofa_latent_{self.dataset_name}.h5ad")
-            self.latent_filepath = output_path  # Update latent_filepath
-            
-            # Save the AnnData object to .h5ad format
+            print("Saving MOFA+ latent embeddings as .h5ad file to dataset...")
+            # Modify AnnData object for scib evaluation
+            metadata = {
+                'obs': self.dataset.obs.copy(),  # Observation metadata
+                'var': self.dataset.var.copy(),  # Variable metadata
+                'uns': self.dataset.uns.copy(),  # Unstructured metadata
+                'obsm': self.dataset.obsm.copy(), # Observation matrices
+                'varm': self.dataset.varm.copy()  # Variable matrices
+            }
+            adata = ad.AnnData(None, **metadata) 
+            pattern = r".*:cell_type"  # Only keep "cell_type" in .obs and not "rna:cell_type" or "atac:cell_type"
+            columns_to_drop = [col for col in adata.obs.columns if re.match(pattern, col)]
+            adata.obs.drop(columns=columns_to_drop, inplace=True)
+
+            adata.obs["batch"] = "batch_1"
             adata.write(self.latent_filepath)
-            
             print(f"Latent data saved to {self.latent_filepath}")
-        
         except Exception as e:
             print(f"Error saving latent embeddings to .h5ad: {e}")
             raise
@@ -236,35 +220,18 @@ class MOFA_Model(ModelFactory):
         """Load latent data from saved .h5ad files."""
         print(f"Loading latent data from {self.latent_filepath}")
         
-        if not self.latent_filepath:
-            raise ValueError("latent_filepath is None. Ensure save_latent() has been successfully executed.")
-        
         if os.path.exists(self.latent_filepath):
-            try:
-                # Load the latent data from the .h5ad file using scanpy
-                adata = sc.read(self.latent_filepath)
-                
-                # Extract the latent embeddings and factors
-                X_mofa = adata.X  # Latent embeddings stored in X
-                LFs_mofa = adata.var  # Latent factors stored in var
-                
-                # Restore the loaded data into the dataset object
-                self.dataset.obsm['X_mofa'] = X_mofa
-                self.dataset.varm['LFs_mofa'] = LFs_mofa
-                
-                print("Latent data loaded successfully.")
-            
-            except Exception as e:
-                print(f"Error loading latent data from .h5ad: {e}")
-                raise
+            self.dataset = sc.read_h5ad(self.latent_filepath)
+            print("Latent data loaded successfully.")
         else:
             print(f"File not found: {self.latent_filepath}")
-            raise FileNotFoundError(f"The file {self.latent_filepath} does not exist.")
+        return self.dataset
+
 
     def umap(self):
         """Generate UMAP visualization."""
         print("Generating UMAP with MOFA embeddings")
-        sc.pp.neighbors(self.dataset, use_rep=self.umap_use_representation, random_state=self.umap_random_state)
+        sc.pp.neighbors(self.dataset, use_rep="X_mofa", random_state=self.umap_random_state)
         sc.tl.umap(self.dataset, random_state=self.umap_random_state)
 
         # Plotting UMAP and saving the figure
@@ -289,7 +256,6 @@ class MultiVI_Model(ModelFactory):
 
         # Multivi parameters from config file
         self.device = multivi_params.get("device")
-        self.protein_expression = multivi_params.get("protein_expression_obsm_key")
         self.max_epochs = multivi_params.get("max_epochs")
         self.learning_rate = multivi_params.get("learning_rate")
         self.latent_key = "X_multivi"
@@ -299,61 +265,55 @@ class MultiVI_Model(ModelFactory):
             print(f"Warning: '{self.umap_color_type}' not found in dataset. Defaulting to None for coloring.")
             self.umap_color_type = None  # Fallback to None if not found
 
-        # Output for MOFA+ model is in ./outputs/multivi_output
+        # Output for Multivi model is in ./outputs/multivi_output
         self.output_dir = os.path.join(self.outdir, "multivi_output")
+        self.latent_filepath = os.path.join(self.output_dir, f"multivis_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
         os.makedirs(self.output_dir, exist_ok=True)
         
-        print('Data columns before training', self.dataset.var.columns)
-
-        print(self.dataset)
-        print(self.dataset.obs)
-        if 'feature_types' not in self.dataset.obs:    
-            print(f"Warning: feature_types not found in dataset.")
-
         # Set up data for MultiVI model
         self.dataset = self.dataset[:, self.dataset.var["feature_types"].argsort()].copy()
-        scvi.model.MULTIVI.setup_anndata(self.dataset, protein_expression_obsm_key=self.protein_expression)
+        scvi.model.MULTIVI.setup_anndata(self.dataset, protein_expression_obsm_key=None)
         self.model = scvi.model.MULTIVI(
             self.dataset,
             n_genes=(self.dataset.var["feature_types"] == "Gene Expression").sum(),
             n_regions=(self.dataset.var["feature_types"] == "Peaks").sum(),
             )
-           
+            
     def to(self):
         """
         Method to set GPU or CPU mode for MOFA+.
         """
         try:
-            print(f"Moving MultiVI model to {self.device}")
-            self.model.to_device(self.device)
-            print(f"Model successfully moved to {self.device}")
+            if self.device !='cpu':
+                print(f"Moving MultiVI model to {self.device}")
+                self.model.to_device(self.device)
+                print(f"Model successfully moved to {self.device}")
+            else:
+                self.model.to_device(self.device)
+                print(f"Recommend to use GPU instead of {self.device}")
         except Exception as e:
             print(f"Invalid device '{self.device}' specified. Use 'cpu' or 'gpu'.")
         
     def train(self):
         print("Training MultiVI Model")
-        print('Data columns before training', self.dataset.var.columns)
-
         try:
             self.to()
             self.model.train()
             self.dataset.obsm[self.latent_key] = self.model.get_latent_representation()
-            print("Training completed.")
+            print(f"Multivi training completed.")
         except Exception as e:
             print(f"Error during training: {e}")
             raise
-        
-        print('Data columns after training', self.dataset.var.columns)
 
     def save_latent(self):
         """Save latent data generated with the MultiVI model."""
         print("Saving latent data")
-        output = os.path.join(self.output_dir, f"multivi_latent_{self.dataset_name}.h5ad"),
-        self.latent_filepath = output
         try:
-            self.model.save(self.output_dir)
             self.dataset.obsm[self.latent_key] = self.model.get_latent_representation()
+            # Modify AnnData object for scib evaluation
+            self.dataset.obs["batch"] = "batch_1"
             self.dataset.write(self.latent_filepath)
+            #self.model.save(self.output_dir)
 
             print(f"MultiVI model for dataset {self.dataset_name} was saved as {self.latent_filepath}")
         except Exception as e:
@@ -371,7 +331,8 @@ class MultiVI_Model(ModelFactory):
             except Exception as e:
                 print(f"Error loading latent data: {e}")
         else:
-            print(f"File not found: {self.output_dir}, multivi_{self.dataset_name}.txt")
+            print(f"File not found: {self.output_dir}, multivi_{self.dataset_name}.h5ad")
+        return self.dataset
 
     def umap(self):
         """Generate UMAP visualization."""
@@ -388,6 +349,7 @@ class MultiVI_Model(ModelFactory):
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")
+
 
 
 class Mowgli_Model(ModelFactory):
