@@ -28,8 +28,8 @@
     }
   },
   "model": {
-    "is_mofa+": false,
-    "is_pca": true,
+    "is_mofa+": true,
+    "is_pca": false,
     "is_multivi": false,
     "is_mowgli": false,
     "pca": {
@@ -47,19 +47,20 @@
       "umap_color_type": "cell_type"
     },
     "multivi": {
-      "device": "cuda:0",
+      "device": "gpu",
       "protein_expression_obsm_key": null,
-      "max_epochs": 500,
-      "learning_rate": 0.0001,
+      "max_epochs": 5,
+      "learning_rate": 0.01,
       "umap_color_type": "cell_type"
     },
     "mowgli": {
       "device": "cuda:0",
-      "latent_dimensions": 4,
+      "latent_dimensions": 15,
       "umap_use_representation": "X_mowgli",
-      "umap_num_neighbors": 15,
-      "umap_size": 20,
-      "umap_alpha": 0.8
+      "umap_num_neighbors": 20,
+      "learning_rate": 0.01,
+      "umap_size": 50,
+      "umap_alpha": 0.7
     }
   },
   "preprocess_params": {

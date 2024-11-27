@@ -169,6 +169,7 @@ class MOFA_Model(ModelFactory):
         self.umap_random_state=mofa_params.get("umap_random_state")
         self.umap_use_representation=mofa_params.get("umap_use_representation")
         self.umap_color_type=mofa_params.get("umap_color_type")
+        self.outfilepath = None
 
         if self.umap_color_type not in self.dataset.obs:    
             print(f"Warning: '{self.umap_color_type}' not found in dataset. Defaulting to None for coloring.")
@@ -193,11 +194,11 @@ class MOFA_Model(ModelFactory):
         Train the MOFA model.
         """
         print("Training MOFA+ Model")
-        outfilepath = os.path.join(self.output_dir, f"mofa_{self.dataset_name}.hdf5")
+        self.outfilepath = os.path.join(self.output_dir, f"mofa_{self.dataset_name}.hdf5")
         try:
             mu.tl.mofa(data=self.dataset, n_factors=self.n_factors, 
-                       outfile=outfilepath, gpu_mode=self.gpu_mode)
-            print(f"Model saved at: {outfilepath}")
+                       outfile=self.outfilepath, gpu_mode=self.gpu_mode)
+            print(f"Model saved at: {self.outfilepath}")
             print("Training completed.")
         except Exception as e:
             print(f"Error during training: {e}")
@@ -207,59 +208,29 @@ class MOFA_Model(ModelFactory):
         """
         Save the latent space embeddings from the trained MOFA model.
         """
-        try:
-            # Save the latent embeddings to the dataset object
-            print("Saving latent embeddings as .h5ad file to dataset...")
-            
-            # Ensure the necessary embeddings and factors are in the dataset
-            X_mofa = self.dataset.obsm["X_mofa"]
-            LFs_mofa = self.dataset.varm["LFs"]
-            
-            # Create an AnnData object to store the data
-            adata = sc.AnnData(X=X_mofa, var=LFs_mofa)
-            adata.uns['latent_factors'] = LFs_mofa
-            
-            # Define the output path for the saved .h5ad file
-            output_path = os.path.join(self.output_dir, f"mofa_latent_{self.dataset_name}.h5ad")
-            self.latent_filepath = output_path  # Update latent_filepath
-            
-            # Save the AnnData object to .h5ad format
-            adata.write(self.latent_filepath)
-            
-            print(f"Latent data saved to {self.latent_filepath}")
-        
-        except Exception as e:
-            print(f"Error saving latent embeddings to .h5ad: {e}")
-            raise
+        print("Model saved at: {self.outfilepath} during training")
 
     def load_latent(self):
-        """Load latent data from saved .h5ad files."""
-        print(f"Loading latent data from {self.latent_filepath}")
-        
-        if not self.latent_filepath:
-            raise ValueError("latent_filepath is None. Ensure save_latent() has been successfully executed.")
-        
-        if os.path.exists(self.latent_filepath):
-            try:
-                # Load the latent data from the .h5ad file using scanpy
-                adata = sc.read(self.latent_filepath)
-                
-                # Extract the latent embeddings and factors
-                X_mofa = adata.X  # Latent embeddings stored in X
-                LFs_mofa = adata.var  # Latent factors stored in var
-                
-                # Restore the loaded data into the dataset object
-                self.dataset.obsm['X_mofa'] = X_mofa
-                self.dataset.varm['LFs_mofa'] = LFs_mofa
-                
-                print("Latent data loaded successfully.")
-            
-            except Exception as e:
-                print(f"Error loading latent data from .h5ad: {e}")
-                raise
-        else:
-            print(f"File not found: {self.latent_filepath}")
-            raise FileNotFoundError(f"The file {self.latent_filepath} does not exist.")
+        """
+        Load latent data from the saved MOFA+ HDF5 file.
+        """
+        try:
+            print(f"Loading latent data from {self.outfilepath}")
+
+            # Use `muon` to load the MOFA+ HDF5 file
+            if not os.path.exists(self.outfilepath):
+                raise FileNotFoundError(f"File not found: {self.outfilepath}")
+
+            # Load the HDF5 file
+            mofa_output = mu.read(self.outfilepath)
+
+            print("Latent data successfully loaded.")
+            return mofa_output
+
+        except Exception as e:
+            print(f"Error loading latent data: {e}")
+            raise
+
 
     def umap(self):
         """Generate UMAP visualization."""
