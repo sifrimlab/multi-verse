@@ -1,36 +1,41 @@
 {
   "data": {
     "dataset_Pbmc10k": {
-      "data_path": "/home/zuzanna/data/",
+      "data_path": "/media/gambino/students_workdir/thihanh/IBP/data",
       "rna": {
         "file_name": "10x-Multiome-Pbmc10k-RNA.h5ad",
-        "is_preprocessed": false
+        "is_preprocessed": false,
+        "annotation": "cell_type"
       },
       "atac": {
         "file_name": "10x-Multiome-Pbmc10k-ATAC.h5ad",
-        "is_preprocessed": false
+        "is_preprocessed": false,
+        "annotation": "cell_type"
       }
     },
     "dataset_TEA": {
-      "data_path": "/home/zuzanna/data/",
+      "data_path": "/media/gambino/students_workdir/thihanh/IBP/h5mu_file",
       "rna": {
-        "file_name": "GSM4949911_X061-AP0C1W1_leukopak_perm-cells_tea_fulldepth_cellrangerarc_filtered_feature_bc_matrix.h5",
-        "is_preprocessed": false
+        "file_name": "GSM4949911_X061-AP0C1W1_leukopak_perm-cells_tea_fulldepth_cellranger-arc_filtered_feature_bc_matrix.h5",
+        "is_preprocessed": false,
+        "annotation": null
       },
       "atac": {
-        "file_name": "GSM4949911_X061-AP0C1W1_leukopak_perm-cells_tea_fulldepth_cellrangerarc_filtered_feature_bc_matrix.h5",
-        "is_preprocessed": false
+        "file_name": "GSM4949911_X061-AP0C1W1_leukopak_perm-cells_tea_fulldepth_cellranger-arc_filtered_feature_bc_matrix.h5",
+        "is_preprocessed": false,
+        "annotation": null
       },
       "adt": {
-        "file_name": "GSM4949911_tea_fulldepth_adt_counts.csv",
-        "is_preprocessed": false
+        "file_name": "GSM4949911_tea_fulldepth_adt_counts.csv.gz",
+        "is_preprocessed": false,
+        "annotation": null
       }
     }
   },
   "model": {
     "is_mofa+": true,
-    "is_pca": false,
-    "is_multivi": false,
+    "is_pca": true,
+    "is_multivi": true,
     "is_mowgli": false,
     "pca": {
       "n_components": 20,
@@ -43,19 +48,21 @@
       "n_factors": 20,
       "n_iteration": 1000,
       "umap_random_state": 1,
-      "umap_use_representation": "X_mofa",
       "umap_color_type": "cell_type"
     },
     "multivi": {
-      "device": "gpu",
-      "protein_expression_obsm_key": null,
-      "max_epochs": 5,
-      "learning_rate": 0.01,
+      "device": "cuda:1",
+      "max_epochs": 500,
+      "learning_rate": 0.0001,
       "umap_color_type": "cell_type"
     },
     "mowgli": {
       "device": "cuda:0",
-      "latent_dimensions": 15,
+      "latent_dimensions": 5,
+      "optimizer": "sgd",
+      "learning_rate": 0.01,
+      "tol_inner": 1e-5,
+      "max_iter_inner": 800,
       "umap_use_representation": "X_mowgli",
       "umap_num_neighbors": 20,
       "learning_rate": 0.01,
@@ -85,7 +92,7 @@
       "max_cells_by_counts": 4000,
       "max_total_counts_by_gene": 1e4,
       "normalization_target_sum": 1e4,
-      "n_top_peaks": 15000
+      "n_top_peaks": 10000
     },
     "adt_filtering": {
       "per_cell_normalization": true

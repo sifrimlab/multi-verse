@@ -11,11 +11,14 @@ import json
 #Output type = anndata, mudata
 
 class DataLoader:
-    def __init__(self, file_path: str = "", modality: str = "", isProcessed=True, config_path: str="./config.json"):
+    def __init__(self, file_path: str = "", modality: str = "", isProcessed=True, annotation: str=None, config_path: str="./config.json"):
+        # These attributes should be loaded from the config file
         self.config_path = config_path
+
         self.file_path = file_path
         self.modality = modality
         self.is_preprocessed = isProcessed
+        self.annotation = annotation
         self.data = None
 
     def read_anndata(self) -> ad.AnnData:
@@ -55,6 +58,13 @@ class DataLoader:
 
             if adata:  # Check if adata is not None
                 adata.var_names_make_unique()
+
+                # Annotation processing
+                if self.annotation == None:
+                    self.annotation = "cell_type"
+                    num_obs = adata.n_obs
+                    adata.obs[self.annotation] = np.zeros(num_obs, dtype=int)
+
                 self.data = adata
                 return self.data
             else:
@@ -87,7 +97,7 @@ class DataLoader:
         self.data = mudata
         return self.data
 
-    def fuse_mudata(self, list_anndata: List[ad.AnnData] = None, list_modality: List[str] = None) -> md.MuData:
+    def fuse_mudata(self, list_anndata: List[ad.AnnData] = None, list_modality: List[str] = None, annotate: str ="cell_type") -> md.MuData:
         """
         Fusing paired anndata as MuData
         intersect_obs will be used if number of obs not equivalent
@@ -107,34 +117,44 @@ class DataLoader:
                     list_anndata[i].X = np.array(list_anndata[i].X.todense())
                 except:
                     pass
-
+                    
         self.data = mu.MuData(data_dict)
-
-        if "cell_type" in self.data["rna"].obs:
-            self.data.obs["cell_type"] = self.data["rna"].obs["cell_type"]
-        else:
-            print("Warning: 'cell_type' not found in RNA modality during concatenation.")
-
-        # self.data.obs["cell_type"] = self.data["rna"].obs["cell_type"]
         mu.pp.intersect_obs(self.data)   # Make sure number of cells are the same for all modalities
+
+        # setting annotation for mudata
+        if annotate in self.data["rna"].obs.columns:
+            self.data.obs[annotate] = self.data["rna"].obs[annotate]
+        else:
+            # If there is no 'cell_type' annotation in rna modality
+            print("No annotation -> setting annotation as 'cell_type' = 0")
+            num_obs = self.data.n_obs
+            self.data.obs[annotate] = np.zeros(num_obs, dtype=int)
+        
         return self.data
 
-    def anndata_concatenate(self, list_anndata: List[ad.AnnData] = None, list_modality: List[str] = None) -> ad.AnnData:
+    def anndata_concatenate(self, list_anndata: List[ad.AnnData] = None, list_modality: List[str] = None, annotate: str ="cell_type") -> ad.AnnData:
         """
-        notes.....
+        Args:
+            list_modality: A list of strings representing the modalities (e.g., ["rna", "atac", "adt"]).
+            list_anndata: A list of AnnData objects corresponding to the modalities (e.g., [adata_rna, adata_atac, adata_adt]).
+        Returns:s
+            A AnnData object
         """
         mudata = self.fuse_mudata(list_anndata=list_anndata, list_modality=list_modality)
         list_ann = []
         for mod in list_modality:
             list_ann.append(mudata[mod])
 
-        anndata = ad.concat(list_ann, axis="var")
-        if "cell_type" in self.data["rna"].obs:
-            anndata.obs["cell_type"] = mudata["rna"].obs["cell_type"]
-        else:
-            print("Warning: 'cell_type' not found in RNA modality during concatenation.")
+        anndata = ad.concat(list_ann, axis="var") # concatenate based on "var" axis
+
+        # setting annotation for mudata
         num_obs = anndata.n_obs
-        anndata.obs["modality"] = np.zeros(num_obs, dtype=int)
+        if annotate in mudata.obs.columns:
+            anndata.obs[annotate] = mudata.obs[annotate]
+        else:
+            anndata.obs[annotate] = np.zeros(num_obs, dtype=int)
+        
+        anndata.obs["modality"] = np.zeros(num_obs, dtype=int) # Adding this to prevent error in multiVI model
         self.data = anndata
         return self.data
 
@@ -168,7 +188,7 @@ class DataLoader:
                     else:
                         raise ValueError("Preprocessing for this modality is not applicable!")
             else:
-                # If there is no modality
+                # If there is no modality (assume to load entire mudata object)
                 self.read_mudata()
         else:
             raise ValueError("File_path must be provided to read anndata")
@@ -258,5 +278,7 @@ class Preprocessing:
         if adt_dict.get("per_cell_normalization"):
             mu.prot.pp.clr(self.data)
         self.data.var["highly_variable"] = True
+        self.data.var["feature_types"] = "Protein Expression"
+        self.data.var["genome"] = "GRCh38"
 
         return self.data
