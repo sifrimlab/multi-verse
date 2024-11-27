@@ -3,6 +3,10 @@ import os
 import torch
 torch.cuda.is_available()
 
+# Ignore all warnings
+import warnings
+warnings.filterwarnings("ignore")
+
 from train import Trainer
 
 
@@ -27,18 +31,27 @@ def main():
     # Load all datasets
     datasets = my_trainer.load_datasets()
 
-    # Iterate over datasets
+    selected_models = my_trainer.model_select(datasets)  # Assuming `selected_models` is now a dict with dataset_name as keys
+
+
+    # Iterate over datasets and their respective models
     for dataset_name, dataset_data in datasets.items():
         print(f"\n=== Processing dataset: {dataset_name} ===")
+        # print(dataset_data)
         
-        # Select models for this dataset
-        models = my_trainer.model_select(dataset_name, dataset_data)
+        # Get the models specific to this dataset
+        if dataset_name not in selected_models:
+            print(f"No models selected for dataset {dataset_name}")
+            continue
+
+        models = selected_models[dataset_name]
         print(f"Loaded models for {dataset_name}: {models.keys()}")
         
         # Train each model
         for model_name, model in models.items():
             try:
                 print(f"\nTraining model: {model_name} for dataset: {dataset_name}")
+                model.to()
                 model.train()
                 model.umap()  # Perform UMAP visualization if needed
             except Exception as e:
