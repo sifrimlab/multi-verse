@@ -160,11 +160,6 @@ class MOFA_Model(ModelFactory):
         self.umap_random_state=mofa_params.get("umap_random_state")
         self.umap_color_type=mofa_params.get("umap_color_type")
 
-        if self.umap_color_type not in self.dataset.obs:    
-            print(f"Warning: '{self.umap_color_type}' not found in dataset. Defaulting to None for coloring.")
-            self.umap_color_type = None  # Fallback to None if not found
-
-
         # Output for MOFA+ model is in ./outputs/mofa_output
         self.output_dir = os.path.join(self.outdir, "mofa_output")
         self.latent_filepath = os.path.join(self.output_dir, f"mofa_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
@@ -198,12 +193,6 @@ class MOFA_Model(ModelFactory):
         """
         Save the latent space embeddings from the trained MOFA model.
         """
-        print("Model saved at: {self.outfilepath} during training")
-
-    def load_latent(self):
-        """
-        Load latent data from the saved MOFA+ HDF5 file.
-        """
         try:
             # Save the latent embeddings to the dataset object
             print("Saving MOFA+ latent embeddings as .h5ad file to dataset...")
@@ -224,7 +213,7 @@ class MOFA_Model(ModelFactory):
             adata.write(self.latent_filepath)
             print(f"Latent data saved to {self.latent_filepath}")
         except Exception as e:
-            print(f"Error loading latent data: {e}")
+            print(f"Error saving latent embeddings to .h5ad: {e}")
             raise
 
     def load_latent(self):
@@ -237,6 +226,7 @@ class MOFA_Model(ModelFactory):
         else:
             print(f"File not found: {self.latent_filepath}")
         return self.dataset
+
 
     def umap(self):
         """Generate UMAP visualization."""
@@ -277,7 +267,7 @@ class MultiVI_Model(ModelFactory):
 
         # Output for Multivi model is in ./outputs/multivi_output
         self.output_dir = os.path.join(self.outdir, "multivi_output")
-        self.latent_filepath = os.path.join(self.output_dir, f"multivis_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
+        self.latent_filepath = os.path.join(self.output_dir, f"multivi_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
         os.makedirs(self.output_dir, exist_ok=True)
         
         # Set up data for MultiVI model
@@ -350,8 +340,8 @@ class MultiVI_Model(ModelFactory):
         try:
             sc.settings.figdir = self.output_dir
             umap_filename = f"_multivi_{self.dataset_name}_plot.png"
-            sc.pp.neighbors(self.dataset, use_rep=self.latent_key)
-            sc.tl.umap(self.dataset)
+            sc.pp.neighbors(self.dataset, use_rep=self.latent_key, random_state=1)
+            sc.tl.umap(self.dataset, random_state=1)
             sc.pl.umap(self.dataset, color=self.umap_color_type, 
                        save=umap_filename)
             print(f"A UMAP plot for MultiVI model with dataset {self.dataset_name} "\
@@ -372,21 +362,22 @@ class Mowgli_Model(ModelFactory):
         super().__init__(dataset, dataset_name, config_path=config_path, model_name="mowgli")
         mowgli_params = self.model_params.get(self.model_name)
 
-        self.dataset = dataset
-        self.dataset_name = dataset_name
+        # Parameters for model settings and training
         self.device = mowgli_params.get("device")
+        self.torch_device = 'cpu' # Default for Mowgli
         self.latent_dimensions = mowgli_params.get("latent_dimensions")
+        self.optimizer = mowgli_params.get("optimizer")
         self.learning_rate = mowgli_params.get("learning_rate")
-        self.umap_num_neighbors = mowgli_params.get("umap_num_neighbors")
-        self.umap_size = mowgli_params.get("umap_size")
-        self.umap_alpha = mowgli_params.get("umap_alpha")
+        self.inner_tolerance = mowgli_params.get("tol_inner")
+        self.max_inner_iteration = mowgli_params.get("max_iter_inner")
+        self.umap_color_type = mowgli_params.get("umap_color_type")
 
         # Create the model instance during initialization
         self.model = mowgli.models.MowgliModel(latent_dim=self.latent_dimensions)
-        
+        print(f"Mowgli model initiated with {self.latent_dimensions} dimension.")
         # Ensure output directory exists
-        self.latent_filepath = None
-        self.output_dir = os.path.join("outputs", "mowgli_output")
+        self.output_dir = os.path.join(self.outdir, "mowgli_output")
+        self.latent_filepath = os.path.join(self.output_dir, f"mowgli_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
         os.makedirs(self.output_dir, exist_ok=True)
         
     def to(self):
@@ -394,9 +385,16 @@ class Mowgli_Model(ModelFactory):
         Method to set GPU or CPU mode for MOFA+.
         """
         try:
-            print(f"Moving Mowgli model to {self.device}")
-            self.device = torch.device(self.device)
-            print(f"Mowgli model successfully moved to {self.device}")
+            if self.device !='cpu':
+                if torch.cuda.is_available():
+                    print("GPU available")
+                    print(f"Moving Mowgli model to {self.device}")
+                    self.torch_device = torch.device(self.device)
+                    print(f"Mowgli model successfully moved to {self.device}")
+                else:
+                    print("GPU cuda not available. Mowgli model will run with cpu")
+            else:
+                print("Mowgli model will run with cpu. Recommend to use GPU for computational efficiency.")
         except Exception as e:
             print(f"Invalid device '{self.device}' specified. Use 'cpu' or 'gpu'.")
             raise
@@ -407,60 +405,45 @@ class Mowgli_Model(ModelFactory):
         try:
             self.model.train(
                 self.dataset,
-                device=self.device,
-                optim_name='sgd',
+                device=self.torch_device,
+                optim_name=self.optimizer,
                 lr=self.learning_rate,
-                tol_inner=1e-5
+                tol_inner=self.inner_tolerance,
+                max_iter_inner=self.max_inner_iteration
             )
-            print("Training completed.")
-
-            # Transpose the embeddings if needed
-            if self.model.W.shape[0] == self.latent_dimensions and self.model.W.shape[1] == self.dataset.n_obs:
-                W_corrected = self.model.W.T  # Transpose to match (n_obs, latent_dimensions)
-                # print("Transposed embeddings shape:", W_corrected.shape)
-            else:
-                W_corrected = self.model.W  # Use directly if the shape is already correct
-
-            # Convert Torch Tensor to NumPy Array
-            if isinstance(W_corrected, torch.Tensor):
-                W_corrected = W_corrected.cpu().numpy()  # Convert to NumPy array (move to CPU if needed)
-
-            # Assign embeddings to obsm
-            if W_corrected.shape[0] == self.dataset.n_obs and W_corrected.shape[1] == self.latent_dimensions:
-                self.dataset.obsm["W_OT"] = W_corrected
-                print("Assigned embeddings to W_OT:", self.dataset.obsm["W_OT"].shape)
-            else:
-                raise ValueError(
-                    f"Embeddings shape mismatch after transpose: Expected ({self.dataset.n_obs}, {self.latent_dimensions}), "
-                    f"but got {W_corrected.shape}."
-                )
-            # print("Overall Loss:", self.model.losses)
-
+            self.dataset.obsm["X_mowgli"] = self.dataset.obsm["W_OT"]
         except Exception as e:
             print(f"Error during training: {e}")
             raise
 
     def save_latent(self):
         """Save latent data generated with the Mowgli model in .h5ad format."""
-        print("Saving latent data")
-
-        # Create AnnData object to store embeddings and losses
-        adata = sc.AnnData(X=self.dataset.obsm["W_OT"])  # W_OT contains embeddings
-        adata.uns["loss_overall"] = self.model.losses  # Save overall loss
-        adata.uns["loss_w"] = self.model.losses_w  # Save W-specific loss
-        adata.uns["loss_h"] = self.model.losses_h  # Save H-specific loss
-        
-        # Add modality-specific H_ matrices to the AnnData object
-        for mod in self.dataset.mod:
-            if f"H_OT" in self.dataset[mod].uns:
-                adata.uns[f"H_{mod}"] = self.dataset[mod].uns["H_OT"]
-            
-        # Define the output path for the saved .h5ad file
-        output_path = os.path.join(self.output_dir, f"mowgli_latent_{self.dataset_name}.h5ad")
-        self.latent_filepath = output_path
-        
-        # Save the AnnData object to .h5ad format
         try:
+            print("Saving latent data")
+
+            # LOSS of from the model (I don't know if we need it, but just leave it for now)
+            H = {f"H_{mod}": self.dataset[mod].uns["H_OT"] for mod in self.dataset.mod}
+            losses = {
+                "loss_overall": self.model.losses,
+                "loss_w": self.model.losses_w,
+                "loss_h": self.model.losses_h
+            }
+
+            # Prepare the latent anndata for saving
+            metadata = {
+                    'obs': self.dataset.obs.copy(),  # Observation metadata
+                    'var': self.dataset.var.copy(),  # Variable metadata
+                    'uns': self.dataset.uns.copy(),  # Unstructured metadata
+                    'obsm': self.dataset.obsm.copy(), # Observation matrices
+                    'varm': self.dataset.varm.copy()  # Variable matrices
+                }
+            adata = ad.AnnData(None, **metadata)
+            if "X_mowgli" not in adata.obsm:
+                adata.obsm["X_mowgli"] = adata.obsm["W_OT"]
+            pattern = r".*:cell_type"  # Only keep "cell_type" in .obs and not "rna:cell_type" or "atac:cell_type"
+            columns_to_drop = [col for col in adata.obs.columns if re.match(pattern, col)]
+            adata.obs.drop(columns=columns_to_drop, inplace=True)
+            adata.obs["batch"] = "batch_1"
             adata.write(self.latent_filepath)
             print(f"Latent data saved to {self.latent_filepath}")
         except Exception as e:
@@ -468,74 +451,32 @@ class Mowgli_Model(ModelFactory):
 
     def load_latent(self):
         """Load latent data from saved .h5ad file."""
-        print("Loading latent data")
+        print(f"Loading latent data from {self.latent_filepath}")
         
-        try:
-            # Load the latent data from the .h5ad file
-            adata = sc.read(self.latent_filepath)
-            
-            # Restore the latent embeddings
-            self.dataset.obsm["W_OT"] = adata.X
-            self.dataset.obsm["W_mowgli"] = adata.X 
-
-            # Restore the modality-specific H_ matrices (for each modality)
-            for mod in self.dataset.mod:
-                if f"H_{mod}" in adata.uns:
-                    self.dataset[mod].uns["H_OT"] = adata.uns[f"H_{mod}"]
-            
-            # Restore losses (if necessary)
-            if "loss_overall" in adata.uns:
-                self.model.losses = adata.uns["loss_overall"]
-            if "loss_w" in adata.uns:
-                self.model.losses_w = adata.uns["loss_w"]
-            if "loss_h" in adata.uns:
-                self.model.losses_h = adata.uns["loss_h"]
-            
-
-            # Synchronize the loaded data with self.dataset
-            self.dataset.obsm["W_OT"] = adata.obsm["W_OT"]
-            self.dataset.uns.update(adata.uns)
-
+        if os.path.exists(self.latent_filepath):
+            self.dataset = sc.read_h5ad(self.latent_filepath)
             print("Latent data loaded successfully.")
-
-            return adata
-            
-        except FileNotFoundError:
+        else:
             print(f"File not found: {self.latent_filepath}")
-        except Exception as e:
-            print(f"Error loading latent data: {e}")
+        return self.dataset
 
     def umap(self):
         """Generate UMAP visualization."""
         print("Generating UMAP plot")
         try:
-            self.dataset.uns = {}
-            # Load and assign embeddings for visualization
-            # Ensure embeddings exist
-            if "W_OT" not in self.dataset.obsm:
-                raise ValueError("Embeddings not found in obsm['W_OT']. Run train() first.")
-
-            # Assign embeddings for visualization
-            self.dataset.obsm["X_mowgli"] = self.dataset.obsm["W_OT"]
-
-            # Set Scanpy figure directory
             sc.settings.figdir = self.output_dir
-
-            # UMAP
-            sc.pp.neighbors(self.dataset, use_rep="X_mowgli", n_neighbors=self.umap_num_neighbors)
-            sc.tl.umap(self.dataset)
-            umap_plot_path = f"mowgli_{self.dataset_name}_umap_plot.png"
-            sc.pl.umap(self.dataset, size=self.umap_size, alpha=self.umap_alpha, save=umap_plot_path)
-            print(f"UMAP plot saved to {os.path.join(self.output_dir, umap_plot_path)}")
-
-
-            # Leiden clustering
-            sc.tl.leiden(self.dataset)
-            leiden_plot_path = f"mowgli_{self.dataset_name}_leiden_plot.png"
-            sc.pl.embedding(self.dataset, "X_umap", color=['leiden'], save=leiden_plot_path)
-            print(f"Leiden plot saved to {os.path.join(self.output_dir, leiden_plot_path)}")
-
+            sc.pp.neighbors(self.dataset, use_rep="X_mowgli", random_state=1)
+            sc.tl.umap(self.dataset, random_state=1)
+        
+            # Plotting UMAP and saving the figure
+            sc.settings.figdir = self.output_dir
+            umap_filename = f"_mowgli_{self.dataset_name}_umap_plot.png"
+            sc.pl.umap(self.dataset, color=self.umap_color_type, save=umap_filename)
+        
+            print(f"A UMAP plot for Mowgli model with dataset {self.dataset_name} was successfully" \
+                  f"generated and saved as {umap_filename}")
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")
-            raise
+
+

@@ -167,3 +167,7 @@ class Trainer:
                     model.save_latent()
         except ValueError as e:
             print(f"Something is wrong in train() function: {e}")
+
+
+
+    
