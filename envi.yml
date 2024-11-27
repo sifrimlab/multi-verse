@@ -1,4 +1,4 @@
-name: myenv
+name: multi_verse
 channels:
   - conda-forge
 dependencies:

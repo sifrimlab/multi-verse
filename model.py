@@ -238,7 +238,6 @@ class MOFA_Model(ModelFactory):
             print(f"File not found: {self.latent_filepath}")
         return self.dataset
 
-
     def umap(self):
         """Generate UMAP visualization."""
         print("Generating UMAP with MOFA embeddings")
@@ -416,16 +415,6 @@ class Mowgli_Model(ModelFactory):
             )
             print("Training completed.")
 
-            # Check if W is stored in the dataset after training
-            # print("Dataset obsm keys after training:", self.dataset.obsm.keys())
-            # print("Shape of dataset embeddings (if found):", self.dataset.obsm.get("W_OT", "Not Found").shape)
-   
-            # Debug: Check the shape of W
-            # if hasattr(self.model, "W"):
-            #     print("Shape of self.model.W:", self.model.W.shape)
-            # else:
-            #     raise ValueError("self.model.W is not defined after training.")
-
             # Transpose the embeddings if needed
             if self.model.W.shape[0] == self.latent_dimensions and self.model.W.shape[1] == self.dataset.n_obs:
                 W_corrected = self.model.W.T  # Transpose to match (n_obs, latent_dimensions)
@@ -440,13 +429,12 @@ class Mowgli_Model(ModelFactory):
             # Assign embeddings to obsm
             if W_corrected.shape[0] == self.dataset.n_obs and W_corrected.shape[1] == self.latent_dimensions:
                 self.dataset.obsm["W_OT"] = W_corrected
-                # print("Assigned embeddings to W_OT:", self.dataset.obsm["W_OT"].shape)
+                print("Assigned embeddings to W_OT:", self.dataset.obsm["W_OT"].shape)
             else:
                 raise ValueError(
                     f"Embeddings shape mismatch after transpose: Expected ({self.dataset.n_obs}, {self.latent_dimensions}), "
                     f"but got {W_corrected.shape}."
                 )
-
             # print("Overall Loss:", self.model.losses)
 
         except Exception as e:
@@ -488,8 +476,9 @@ class Mowgli_Model(ModelFactory):
             adata = sc.read(self.latent_filepath)
             
             # Restore the latent embeddings
-            self.dataset.obsm["W_mowgli"] = adata.X
-            
+            self.dataset.obsm["W_OT"] = adata.X
+            self.dataset.obsm["W_mowgli"] = adata.X 
+
             # Restore the modality-specific H_ matrices (for each modality)
             for mod in self.dataset.mod:
                 if f"H_{mod}" in adata.uns:
@@ -503,7 +492,13 @@ class Mowgli_Model(ModelFactory):
             if "loss_h" in adata.uns:
                 self.model.losses_h = adata.uns["loss_h"]
             
+
+            # Synchronize the loaded data with self.dataset
+            self.dataset.obsm["W_OT"] = adata.obsm["W_OT"]
+            self.dataset.uns.update(adata.uns)
+
             print("Latent data loaded successfully.")
+
             return adata
             
         except FileNotFoundError:
