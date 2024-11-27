@@ -3,7 +3,7 @@ import json
 import scanpy as sc
 import scib
 import anndata as ad
-
+from model import PCA_Model, MOFA_Model, MultiVI_Model, Mowgli_Model 
 
 class Evaluator:
     def __init__(self, latent_dir="./outputs", output_file="./outputs/results.json"):
@@ -15,7 +15,12 @@ class Evaluator:
         """
         self.latent_dir = latent_dir
         self.output_file = output_file
-
+        self.models = {
+            "pca_output": PCA_Model,
+            "mofa_output": MOFA_Model,
+            "multivi_output": MultiVI_Model,
+            "mowgli_output": Mowgli_Model,
+        }
     def process_models(self):
         if not os.path.exists(self.latent_dir):
             raise FileNotFoundError(f"Directory not found: {self.latent_dir}")
