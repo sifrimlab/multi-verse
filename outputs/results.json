@@ -1,0 +1,26 @@
+{
+    "pca_output": {
+        "dataset_Pbmc10k": {
+            "_is_copy": null,
+            "_mgr": {},
+            "_item_cache": {},
+            "_attrs": {},
+            "_flags": {
+                "_allows_duplicate_labels": true,
+                "_obj": "<weakref at 0x000002CABF0AD260; to 'DataFrame' at 0x000002CABF1E25D0>"
+            }
+        }
+    },
+    "mofa_output": {
+        "dataset_Pbmc10k": {
+            "_is_copy": null,
+            "_mgr": {},
+            "_item_cache": {},
+            "_attrs": {},
+            "_flags": {
+                "_allows_duplicate_labels": true,
+                "_obj": "<weakref at 0x000002CABEFF96C0; to 'DataFrame' at 0x000002CABEE9C550>"
+            }
+        }
+    }
+}
