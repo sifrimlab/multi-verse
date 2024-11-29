@@ -7,20 +7,6 @@ from model import PCA_Model, MOFA_Model, MultiVI_Model, Mowgli_Model
 import numpy as np
 import pandas as pd
 
-
-# Function to convert non-serializable types to serializable types
-def make_serializable(obj):
-    if isinstance(obj, pd.DataFrame):
-        return obj.to_dict()  # Convert DataFrame to a dictionary
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()  # Convert numpy array to a list
-    elif isinstance(obj, pd.Series):
-        return obj.tolist()  # Convert Series to a list
-    elif isinstance(obj, float) and np.isnan(obj):
-        return None  # Convert NaN values to None to make them JSON serializable
-    return obj  # Return the object if it is already serializable
-
-
 class Evaluator:
     def __init__(self, latent_dir, output_file):
         """
@@ -37,7 +23,6 @@ class Evaluator:
             "multivi_output": MultiVI_Model,
             "mowgli_output": Mowgli_Model,
         }
-        self.embed = None
 
     def process_models(self):
         if not os.path.exists(self.latent_dir):
@@ -81,24 +66,12 @@ class Evaluator:
                         metrics = self.calculate_metrics(latent_data)
                         print("\nMetrics for dataset '{}':\n{}".format(dataset_name, metrics))
 
-                        # Assuming metrics is a dictionary with numerical values
-                        metric_names = ["NMI_cluster/label", "ARI_cluster/label", "ASW_label", "ASW_label/batch",
-                                        "PCR_batch", "cell_cycle_conservation", "isolated_label_F1",
-                                        "isolated_label_silhouette", "graph_conn", "kBET", "iLISI", "cLISI",
-                                        "hvg_overlap", "trajectory"]
-                        # If metrics is a list of values, we map them to metric names
-                        if isinstance(metrics, dict):
-                            # Convert each metric value to a dictionary with name
-                            serializable_metrics = {name: make_serializable(value) for name, value in
-                                                    zip(metric_names, metrics.values())}
-                        else:
-                            # If metrics is just a list, use index-based mapping
-                            serializable_metrics = {f"Metric_{i + 1}": make_serializable(value) for i, value in
-                                                    enumerate(metrics)}
+                        # Define metric names to map to
 
+                        # Store metrics in the results dictionary
                         if model_folder not in results:
                             results[model_folder] = {}
-                        results[model_folder][dataset_name] = serializable_metrics
+                        results[model_folder][dataset_name] ="{}".format(metrics)
 
                     except Exception as e:
                         print(f"Error processing {model_folder} for {file}: {e}")
@@ -136,7 +109,7 @@ class Evaluator:
             raise ValueError(f"Failed to detect batch_key={batch_key}, label_key={label_key}, or embed={embed_key}")
 
         print(f"Using parameters: batch_key={batch_key}, label_key={label_key}, embed={embed_key}")
-        self.embed = embed_key
+
 
         # Calculate metrics
         metrics = scib.metrics.metrics(
@@ -144,7 +117,7 @@ class Evaluator:
             latent_data,
             batch_key=batch_key,
             label_key=label_key,
-            embed=self.embed,
+            embed=embed_key,
             ari_=True,
             nmi_=True,
             silhouette_=True,
