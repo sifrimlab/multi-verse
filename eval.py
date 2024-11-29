@@ -3,10 +3,26 @@ import json
 import scanpy as sc
 import scib
 import anndata as ad
-from model import PCA_Model, MOFA_Model, MultiVI_Model, Mowgli_Model 
+from model import PCA_Model, MOFA_Model, MultiVI_Model, Mowgli_Model
+import numpy as np
+import pandas as pd
+
+
+# Function to convert non-serializable types to serializable types
+def make_serializable(obj):
+    if isinstance(obj, pd.DataFrame):
+        return obj.to_dict()  # Convert DataFrame to a dictionary
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()  # Convert numpy array to a list
+    elif isinstance(obj, pd.Series):
+        return obj.tolist()  # Convert Series to a list
+    elif isinstance(obj, float) and np.isnan(obj):
+        return None  # Convert NaN values to None to make them JSON serializable
+    return obj  # Return the object if it is already serializable
+
 
 class Evaluator:
-    def __init__(self, latent_dir="./outputs", output_file="./outputs/results.json"):
+    def __init__(self, latent_dir, output_file):
         """
         Initializes the Evaluator class for batch processing of latent space files.
         
@@ -21,7 +37,8 @@ class Evaluator:
             "multivi_output": MultiVI_Model,
             "mowgli_output": Mowgli_Model,
         }
-        self.embed=None
+        self.embed = None
+
     def process_models(self):
         if not os.path.exists(self.latent_dir):
             raise FileNotFoundError(f"Directory not found: {self.latent_dir}")
@@ -47,9 +64,12 @@ class Evaluator:
                         model_instance = model_class(dataset=None, dataset_name=dataset_name, config_path=config_path)
                         model_instance.latent_filepath = os.path.join(model_dir, file)
                         latent_data = model_instance.load_latent()
+                        if latent_data is None:
+                            print(f"Failed to load latent data for file {file}, dataset {dataset_name}")
+                            continue
                         latent_data.var_names_make_unique()
                         if isinstance(model_instance, MOFA_Model):
-                            sc.pp.neighbors(latent_data, use_rep="X_mofa")  
+                            sc.pp.neighbors(latent_data, use_rep="X_mofa")  # Update as necessary
                         elif isinstance(model_instance, Mowgli_Model):
                             sc.pp.neighbors(latent_data, use_rep="X_mowgli")
                         elif isinstance(model_instance, MultiVI_Model):
@@ -59,16 +79,34 @@ class Evaluator:
 
                         # Calculate SCIB metrics
                         metrics = self.calculate_metrics(latent_data)
+                        print("\nMetrics for dataset '{}':\n{}".format(dataset_name, metrics))
+
+                        # Assuming metrics is a dictionary with numerical values
+                        metric_names = ["NMI_cluster/label", "ARI_cluster/label", "ASW_label", "ASW_label/batch",
+                                        "PCR_batch", "cell_cycle_conservation", "isolated_label_F1",
+                                        "isolated_label_silhouette", "graph_conn", "kBET", "iLISI", "cLISI",
+                                        "hvg_overlap", "trajectory"]
+                        # If metrics is a list of values, we map them to metric names
+                        if isinstance(metrics, dict):
+                            # Convert each metric value to a dictionary with name
+                            serializable_metrics = {name: make_serializable(value) for name, value in
+                                                    zip(metric_names, metrics.values())}
+                        else:
+                            # If metrics is just a list, use index-based mapping
+                            serializable_metrics = {f"Metric_{i + 1}": make_serializable(value) for i, value in
+                                                    enumerate(metrics)}
+
                         if model_folder not in results:
                             results[model_folder] = {}
-                        results[model_folder][dataset_name] = metrics
+                        results[model_folder][dataset_name] = serializable_metrics
 
                     except Exception as e:
                         print(f"Error processing {model_folder} for {file}: {e}")
 
-        with open(self.output_file, "w") as f:
+        with open(self.output_file, "w+") as f:
             json.dump(results, f, indent=4)
         print(f"Results saved to {self.output_file}")
+
     def calculate_metrics(self, latent_data):
         """
         Simplified wrapper for scib.metrics.metrics to automatically infer parameters.
@@ -79,9 +117,9 @@ class Evaluator:
         :param embed: Key for embeddings in .obsm (optional).
         :return: Dictionary with calculated metrics.
         """
-        batch_key=None
-        label_key=None
-        embed_key=None
+        batch_key = None
+        label_key = None
+        embed_key = None
         # Auto-detect batch_key if not provided
         if batch_key is None:
             batch_key = next((key for key in latent_data.obs.keys() if key.endswith("batch")), None)
@@ -101,7 +139,7 @@ class Evaluator:
         self.embed = embed_key
 
         # Calculate metrics
-        metrics=scib.metrics.metrics(
+        metrics = scib.metrics.metrics(
             latent_data,
             latent_data,
             batch_key=batch_key,
@@ -118,5 +156,5 @@ class Evaluator:
 
 # Usage
 if __name__ == "__main__":
-    evaluator = Evaluator(latent_dir="./outputs")
+    evaluator = Evaluator(latent_dir="./outputs", output_file="./outputs/results.json")
     evaluator.process_models()
