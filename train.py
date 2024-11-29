@@ -5,7 +5,7 @@ from config import load_config
 from dataloader import DataLoader
 
 class Trainer: 
-    def __init__(self, config_path: str="./config.json"):
+    def __init__(self, config_path: str="./config.json", hyperparams=None):
         """
         Initializes the Trainer class.
         model is an object from one model class in model.py
@@ -26,6 +26,16 @@ class Trainer:
             if isinstance(value, dict) and "data_path" in value
         ]
         print("Datasets Detected:", self.dataset_names)
+
+         # Update the configuration with hyperparameters, if provided
+        if hyperparams:
+            for model_name, params in hyperparams.items():
+                if model_name in self.config["model"]:
+                    valid_keys = self.config["model"][model_name].keys()
+                    filtered_params = {k: v for k, v in params.items() if k in valid_keys}
+                    self.config["model"][model_name].update(filtered_params)
+                    print(f"Updated parameters for {model_name}: {params}")
+
 
 
     def load_datasets(self):
@@ -122,7 +132,7 @@ class Trainer:
             raise ValueError("Only accept datatype of concatenate or mudata.")
         return self.data
     
-    def model_select(self, dataset_dict):
+    def model_select(self, dataset_dict, is_gridsearch=False):
         """
         Initialize models for a specific dataset.
         """
@@ -134,19 +144,23 @@ class Trainer:
         for dataset_name in self.dataset_names:
             models = {}
             if self.model_info["is_pca"]:
-                pca = PCA_Model(dataset=data_concat[dataset_name], dataset_name=dataset_name, config_path=self.config_path)
+                pca = PCA_Model(dataset=data_concat[dataset_name], dataset_name=dataset_name, 
+                                config_path=self.config_path, is_gridsearch=is_gridsearch)
                 models["pca"] = pca
 
             if self.model_info["is_multivi"]:
-                multivi = MultiVI_Model(dataset=data_concat[dataset_name], dataset_name=dataset_name, config_path=self.config_path)
+                multivi = MultiVI_Model(dataset=data_concat[dataset_name], dataset_name=dataset_name, 
+                                        config_path=self.config_path, is_gridsearch=is_gridsearch)
                 models["multivi"] = multivi
 
             if self.model_info["is_mofa+"]:
-                mofa = MOFA_Model(dataset=data_mudata[dataset_name], dataset_name=dataset_name, config_path=self.config_path)
+                mofa = MOFA_Model(dataset=data_mudata[dataset_name], dataset_name=dataset_name, 
+                                  config_path=self.config_path, is_gridsearch=is_gridsearch)
                 models["mofa+"] = mofa
 
             if self.model_info["is_mowgli"]:
-                mowgli = Mowgli_Model(dataset=data_mudata[dataset_name], dataset_name=dataset_name, config_path=self.config_path)
+                mowgli = Mowgli_Model(dataset=data_mudata[dataset_name], dataset_name=dataset_name, 
+                                      config_path=self.config_path, is_gridsearch=is_gridsearch)
                 models["mowgli"] = mowgli
 
             models_for_data[dataset_name] = models 

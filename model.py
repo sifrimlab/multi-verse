@@ -16,6 +16,7 @@ import os
 import torch
 import scvi
 import re
+from sklearn.metrics import silhouette_score, davies_bouldin_score
 
 from config import load_config 
 
@@ -24,7 +25,9 @@ class ModelFactory:
     Other classes will inherit initial attributes of this class (config_file, dataset, dataset_name, ...)
     List of functions in each model is same as ModelFactory but how it works is different for each model
     """
-    def __init__(self, dataset, dataset_name: str, model_name:str = "", outdir="./outputs", config_path: str="./config.json"):
+    def __init__(self, dataset, dataset_name: str, 
+                 model_name:str = "", outdir="./outputs", 
+                 config_path: str="./config.json", is_gridsearch=False):
         self.model_params = load_config(config_path=config_path).get("model")
         self.dataset = dataset
         self.dataset_name = dataset_name
@@ -33,7 +36,17 @@ class ModelFactory:
         # Embeddings of the latent space
         self.latent = np.zeros((2,2))
         self.latent_filepath = None
+
+        self.is_grid_search = is_gridsearch  # Flag for grid search runs
+
     
+        if self.is_grid_search:
+            self.output_dir = os.path.join(self.outdir, "gridsearch_output")
+        else:
+            self.output_dir = os.path.join(self.outdir, f"{self.model_name}_output")
+        
+        os.makedirs(self.output_dir, exist_ok=True)
+
     def to(self):
         print("Setting device for model CPU or GPU.")
 
@@ -53,14 +66,15 @@ class ModelFactory:
 class PCA_Model(ModelFactory):
     """PCA implementation"""
 
-    def __init__(self, dataset: ad.AnnData, dataset_name, config_path: str="./config.json"):
+    def __init__(self, dataset: ad.AnnData, dataset_name, config_path: str="./config.json", is_gridsearch=False):
         """
         Initialize the PCA model with the specified parameters.
         Input data is AnnData object that was concatenated of multiple modality
         """
         print("Initializing PCA Model")
 
-        super().__init__(dataset, dataset_name, config_path=config_path,model_name="pca")
+        super().__init__(dataset, dataset_name, config_path=config_path,
+                         model_name="pca", is_gridsearch=is_gridsearch)
         pca_params= self.model_params.get(self.model_name)
 
         # PCA parameters from config file
@@ -70,13 +84,13 @@ class PCA_Model(ModelFactory):
         self.umap_random_state = pca_params.get("umap_random_state")
         self.umap_color_type = pca_params.get("umap_color_type")  # Default ass 'cell_type'
 
-        # Output for PCA model is in ./outputs/pca_output
-        self.output_dir = os.path.join(self.outdir, "pca_output")
-        self.latent_filepath = os.path.join(self.output_dir, f"pca_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
-        os.makedirs(self.output_dir, exist_ok=True)
-        
-        # For demonstration, we'll assume PCA is just a placeholder here
-        # self.pca = PCA(n_components=self.n_components)
+        # Output for PCA model is in ./outputs
+        base_filename = f"pca_{dataset_name}"
+        if is_gridsearch:
+            base_filename += "_gridsearch"
+        self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
+        self.umap_filename = os.path.join(self.output_dir, f"_{base_filename}.png")
+
         print(f"PCA initialized with {self.dataset_name}, {self.n_components} components.")
 
     def to(self):
@@ -96,9 +110,15 @@ class PCA_Model(ModelFactory):
         # Fit PCA and transform the data with scanpy
         sc.pp.pca(data=self.dataset, n_comps=self.n_components, use_highly_variable=True)
         
+        # Save latent representation
         self.latent = self.dataset.obsm["X_pca"]
 
+        # Capture variance explained ratio
+        self.variance_ratio = self.dataset.uns["pca"]["variance_ratio"]
+
         print(f"Training PCA completed with {self.n_components} components")
+        # print(f"Variance explained by each component: {self.variance_ratio}")
+        print(f"Total variance explained: {sum(self.variance_ratio)}")
 
     def save_latent(self):
         """Save the PCA latent representations."""
@@ -132,24 +152,39 @@ class PCA_Model(ModelFactory):
 
         # Plotting UMAP and saving the figure
         sc.settings.figdir = self.output_dir
-        umap_filename = f"_pca_{self.dataset_name}_plot.png"
-        sc.pl.umap(self.dataset, color=self.umap_color_type, save=umap_filename)
+        filename = os.path.basename(self.umap_filename)
 
-        print(f"UMAP plot for {self.model_name} {self.dataset_name} saved as {umap_filename}")
+        sc.pl.umap(self.dataset, color=self.umap_color_type, save=filename)
+
+        print(f"UMAP plot for {self.model_name} {self.dataset_name} saved as {filename}")
+
+    def evaluate_model(self):
+        """
+        Evaluate the trained PCA model based on variance explained.
+        """
+        print("Evaluating PCA model...")
+
+        if hasattr(self, "variance_ratio"):
+            total_variance = sum(self.variance_ratio)
+            print(f"Total Variance Explained: {total_variance}")
+            return total_variance
+        else:
+            raise ValueError("PCA variance ratio not available in the model.")
 
 
 class MOFA_Model(ModelFactory):
     """MOFA+ Model implementation"""
     mu.set_options(display_style = "html", display_html_expand = 0b000)
 
-    def __init__(self, dataset: md.MuData, dataset_name, config_path: str="./config.json"):
+    def __init__(self, dataset: md.MuData, dataset_name, config_path: str="./config.json", is_gridsearch=False):
         """
         Initialize the MOFA model with the specified parameters.
         Input data is MuData object that contains multiple modality
         """
         print("Initializing MOFA+ Model")
         
-        super().__init__(dataset, dataset_name, config_path=config_path, model_name="mofa+")
+        super().__init__(dataset, dataset_name, config_path=config_path, model_name="mofa+", is_gridsearch=is_gridsearch)
+    
         mofa_params= self.model_params.get(self.model_name)
 
         # MOFA+ parameters from config file
@@ -160,10 +195,12 @@ class MOFA_Model(ModelFactory):
         self.umap_random_state=mofa_params.get("umap_random_state")
         self.umap_color_type=mofa_params.get("umap_color_type")
 
-        # Output for MOFA+ model is in ./outputs/mofa_output
-        self.output_dir = os.path.join(self.outdir, "mofa_output")
-        self.latent_filepath = os.path.join(self.output_dir, f"mofa_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
-        os.makedirs(self.output_dir, exist_ok=True)
+        # Output for MOFA+ model is in ./outputs
+        base_filename = f"mofa_{dataset_name}"
+        if is_gridsearch:
+            base_filename += "_gridsearch"
+        self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
+        self.umap_filename = os.path.join(self.output_dir, f"{base_filename}_umap.png")
 
         print(f"MOFA+ initialized with {self.dataset_name}, {self.n_factors} factors to be trained with.")
 
@@ -184,7 +221,11 @@ class MOFA_Model(ModelFactory):
         print("Training MOFA+ Model")
         try:
             mu.tl.mofa(data=self.dataset, n_factors=self.n_factors, gpu_mode=self.gpu_mode)
+            self.explained_variance = self.dataset.uns["mofa"]["explained_variance"]
+
             print(f"MOFA+ training completed with {self.n_factors} factors")
+            print(f"Explained variance per factor: {self.explained_variance}")
+            print(f"Total explained variance: {sum(self.explained_variance)}")
         except Exception as e:
             print(f"Error during training: {e}")
             raise
@@ -227,7 +268,6 @@ class MOFA_Model(ModelFactory):
             print(f"File not found: {self.latent_filepath}")
         return self.dataset
 
-
     def umap(self):
         """Generate UMAP visualization."""
         print("Generating UMAP with MOFA embeddings")
@@ -236,22 +276,34 @@ class MOFA_Model(ModelFactory):
 
         # Plotting UMAP and saving the figure
         sc.settings.figdir = self.output_dir
-        filename = f"_mofa_{self.dataset_name}_plot.png"
+        filename = os.path.basename(self.umap_filename) 
         sc.pl.umap(self.dataset, color=self.umap_color_type, save=filename)
         print(f"UMAP plot saved as {filename}")
+
+    def evaluate_model(self):
+        """
+        Evaluate the trained MOFA+ model based on explained variance.
+        """
+        if hasattr(self, "explained_variance"):
+            total_variance = sum(self.explained_variance)
+            print(f"Total Explained Variance (MOFA+): {total_variance}")
+            return total_variance
+        else:
+            raise ValueError("Explained variance not available for MOFA+.")
 
 
 class MultiVI_Model(ModelFactory):
     """MultiVI Model implementation."""
     
-    def __init__(self, dataset: ad.AnnData, dataset_name, config_path: str="./config.json"):
+    def __init__(self, dataset: ad.AnnData, dataset_name, config_path: str="./config.json", is_gridsearch=False):
         """
         Initialize the MultiVi model with the specified parameters.
         Input data is AnnData object that was concatenated of multiple modality
         """
         print("Initializing MultiVI Model")
 
-        super().__init__(dataset, dataset_name, config_path=config_path, model_name="multivi")
+        super().__init__(dataset, dataset_name, config_path=config_path, 
+                         model_name="multivi", is_gridsearch=is_gridsearch)
         multivi_params= self.model_params.get(self.model_name)
 
         # Multivi parameters from config file
@@ -265,10 +317,12 @@ class MultiVI_Model(ModelFactory):
             print(f"Warning: '{self.umap_color_type}' not found in dataset. Defaulting to None for coloring.")
             self.umap_color_type = None  # Fallback to None if not found
 
-        # Output for Multivi model is in ./outputs/multivi_output
-        self.output_dir = os.path.join(self.outdir, "multivi_output")
-        self.latent_filepath = os.path.join(self.output_dir, f"multivi_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
-        os.makedirs(self.output_dir, exist_ok=True)
+        # Output for Multivi model is in ./outputs
+        base_filename = f"multivi_{dataset_name}"
+        if is_gridsearch:
+            base_filename += "_gridsearch"
+        self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
+        self.umap_filename = os.path.join(self.output_dir, f"{base_filename}_umap.png")
         
         # Set up data for MultiVI model
         self.dataset = self.dataset[:, self.dataset.var["feature_types"].argsort()].copy()
@@ -339,27 +393,45 @@ class MultiVI_Model(ModelFactory):
         print("Generating UMAP plot")
         try:
             sc.settings.figdir = self.output_dir
-            umap_filename = f"_multivi_{self.dataset_name}_plot.png"
+            filename = os.path.basename(self.umap_filename) 
             sc.pp.neighbors(self.dataset, use_rep=self.latent_key, random_state=1)
             sc.tl.umap(self.dataset, random_state=1)
             sc.pl.umap(self.dataset, color=self.umap_color_type, 
-                       save=umap_filename)
+                       save=filename)
             print(f"A UMAP plot for MultiVI model with dataset {self.dataset_name} "\
-                  f"was succesfully generated and saved as multivi_{self.dataset_name}_umap_plot.png")
+                  f"was succesfully generated and saved as {filename}")
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")
+
+    def evaluate_model(self):
+        """
+        Evaluate the trained MultiVI model using clustering metrics.
+        """
+        if "X_multivi" in self.dataset.obsm:
+            latent = self.dataset.obsm["X_multivi"]
+            labels = self.dataset.obs.get(self.umap_color_type, None)
+
+            if labels is not None:
+                silhouette = silhouette_score(latent, labels)
+                print(f"Silhouette Score (MultiVI): {silhouette}")
+                return silhouette
+            else:
+                raise ValueError("Labels not found for clustering evaluation.")
+        else:
+            raise ValueError("Latent representation (X_multivi) not found.")
 
 
 class Mowgli_Model(ModelFactory):
     """Mowgli model implementation."""
     
-    def __init__(self, dataset, dataset_name, config_path: str="./config.json"):
+    def __init__(self, dataset, dataset_name, config_path: str="./config.json", is_gridsearch=False):
         """Initialize the Mowgli model with the specified parameters."""
 
         print("Initializing Mowgli Model")
         
-        super().__init__(dataset, dataset_name, config_path=config_path, model_name="mowgli")
+        super().__init__(dataset, dataset_name, config_path=config_path, 
+                         model_name="mowgli", is_gridsearch=is_gridsearch)
         mowgli_params = self.model_params.get(self.model_name)
 
         # Parameters for model settings and training
@@ -375,10 +447,13 @@ class Mowgli_Model(ModelFactory):
         # Create the model instance during initialization
         self.model = mowgli.models.MowgliModel(latent_dim=self.latent_dimensions)
         print(f"Mowgli model initiated with {self.latent_dimensions} dimension.")
-        # Ensure output directory exists
-        self.output_dir = os.path.join(self.outdir, "mowgli_output")
-        self.latent_filepath = os.path.join(self.output_dir, f"mowgli_{self.dataset_name}.h5ad")  # Create h5ad filename for saving latent space later
-        os.makedirs(self.output_dir, exist_ok=True)
+        
+        # Output for Mowgli model is in ./outputs
+        base_filename = f"mowgli_{dataset_name}"
+        if is_gridsearch:
+            base_filename += "_gridsearch"
+        self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
+        self.umap_filename = os.path.join(self.output_dir, f"{base_filename}_umap.png")
         
     def to(self):
         """
@@ -412,6 +487,8 @@ class Mowgli_Model(ModelFactory):
                 max_iter_inner=self.max_inner_iteration
             )
             self.dataset.obsm["X_mowgli"] = self.dataset.obsm["W_OT"]
+            self.loss = self.model.losses[-1]  # Capture the final loss
+            print(f"Final training loss: {self.loss}")
         except Exception as e:
             print(f"Error during training: {e}")
             raise
@@ -465,18 +542,27 @@ class Mowgli_Model(ModelFactory):
         print("Generating UMAP plot")
         try:
             sc.settings.figdir = self.output_dir
+            filename = os.path.basename(self.umap_filename) 
             sc.pp.neighbors(self.dataset, use_rep="X_mowgli", random_state=1)
             sc.tl.umap(self.dataset, random_state=1)
         
             # Plotting UMAP and saving the figure
-            sc.settings.figdir = self.output_dir
-            umap_filename = f"_mowgli_{self.dataset_name}_umap_plot.png"
-            sc.pl.umap(self.dataset, color=self.umap_color_type, save=umap_filename)
+            sc.pl.umap(self.dataset, color=self.umap_color_type, save=filename)
         
             print(f"A UMAP plot for Mowgli model with dataset {self.dataset_name} was successfully" \
-                  f"generated and saved as {umap_filename}")
+                  f"generated and saved as {filename}")
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")
+
+    def evaluate_model(self):
+        """
+        Evaluate the trained Mowgli model using the final training loss.
+        """
+        if hasattr(self, "loss"):
+            print(f"Optimal Transport Loss (Mowgli): {self.loss}")
+            return -self.loss  # Lower loss is better, so return negative for maximization
+        else:
+            raise ValueError("Loss not available for Mowgli.")
 
 
