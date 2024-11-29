@@ -3,10 +3,10 @@ import json
 import scanpy as sc
 import scib
 import anndata as ad
-
+from model import PCA_Model, MOFA_Model, MultiVI_Model, Mowgli_Model 
 
 class Evaluator:
-    def __init__(self, latent_dir, output_file="results.json"):
+    def __init__(self, latent_dir="./outputs", output_file="./outputs/results.json"):
         """
         Initializes the Evaluator class for batch processing of latent space files.
         
@@ -15,65 +15,53 @@ class Evaluator:
         """
         self.latent_dir = latent_dir
         self.output_file = output_file
-
-    def process_all_latents(self):
-        """
-        Processes all latent space files in the specified directory, calculates metrics, 
-        and writes them to a single JSON file.
-        """
+        self.models = {
+            "pca_output": PCA_Model,
+            "mofa_output": MOFA_Model,
+            "multivi_output": MultiVI_Model,
+            "mowgli_output": Mowgli_Model,
+        }
+    def process_models(self):
         if not os.path.exists(self.latent_dir):
             raise FileNotFoundError(f"Directory not found: {self.latent_dir}")
 
-        # Find all .h5ad files in the directory
-        latent_files = [f for f in os.listdir(self.latent_dir) if f.endswith('.h5ad')]
-        if not latent_files:
-            print(f"No latent space files found in {self.latent_dir}.")
-            return
-
-        print(f"Found {len(latent_files)} latent space files in {self.latent_dir}.")
-
-        # Create a dictionary to store results
         results = {}
 
-        for file in latent_files:
-            try:
-                result = self.process_single_latent(file)
-                results[file] = result
-            except Exception as e:
-                print(f"Error processing file {file}: {e}")
+        for model_folder, model_class in self.models.items():
+            model_dir = os.path.join(self.latent_dir, model_folder)
+            if not os.path.exists(model_dir):
+                print(f"Skipping {model_folder}: Directory {model_dir} not found.")
+                continue
 
-        # Write all results to a single JSON file
-        print(f"Writing combined results to {self.output_file}")
-        with open(self.output_file, "w") as json_file:
-            json.dump(results, json_file, indent=4)
-        print(f"All results saved successfully.")
+            for file in os.listdir(model_dir):
+                if file.endswith(".h5ad"):
+                    try:
+                        dataset_name = "_".join(file.split("_")[1:]).split(".")[0]
+                        print(f"Processing {model_folder} for file {file}, dataset {dataset_name}")
 
-    def process_single_latent(self, filename):
-        """
-        Processes a single latent space file, calculates metrics, and returns the results as a dictionary.
+                        config_path = "./config.json"
+                        if not os.path.exists(config_path):
+                            raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
-        :param filename: Name of the latent space file.
-        :return: A dictionary containing the results for this file.
-        """
-        input_path = os.path.join(self.latent_dir, filename)
+                        model_instance = model_class(dataset=None, dataset_name=dataset_name, config_path=config_path)
+                        model_instance.latent_filepath = os.path.join(model_dir, file)
+                        latent_data = model_instance.load_latent()
+                        latent_data.var_names_make_unique()
+                        sc.pp.neighbors(latent_data, use_rep="X_mofa")  # Update as necessary
 
-        # Load latent space data
-        print(f"Processing file: {input_path}")
-        latent_data = sc.read_h5ad(input_path)
+                        # Calculate SCIB metrics
+                        metrics = self.calculate_metrics(latent_data)
+                        if model_folder not in results:
+                            results[model_folder] = {}
+                        results[model_folder][dataset_name] = metrics
 
-        # Convert AnnData to dictionary
-        latent_dict = {
-            "obs": latent_data.obs.to_dict(),
-        }
+                    except Exception as e:
+                        print(f"Error processing {model_folder} for {file}: {e}")
 
-        # Calculate metrics using scib
-        metrics = self.calculate_metrics(latent_data)
-
-        # Merge metrics into the result dictionary
-        latent_dict["metrics"] = metrics
-        return latent_dict
-
-    def calculate_metrics(self, latent_data, batch_key=None, label_key=None, embed=None):
+        with open(self.output_file, "w") as f:
+            json.dump(results, f, indent=4)
+        print(f"Results saved to {self.output_file}")
+    def calculate_metrics(self, latent_data):
         """
         Simplified wrapper for scib.metrics.metrics to automatically infer parameters.
         
@@ -83,6 +71,9 @@ class Evaluator:
         :param embed: Key for embeddings in .obsm (optional).
         :return: Dictionary with calculated metrics.
         """
+        batch_key=None
+        label_key=None
+        embed_key=None
         # Auto-detect batch_key if not provided
         if batch_key is None:
             batch_key = next((key for key in latent_data.obs.keys() if key.endswith(":batch")), None)
@@ -92,30 +83,31 @@ class Evaluator:
             label_key = next((key for key in latent_data.obs.keys() if key.endswith(":cell_type")), None)
 
         # Auto-detect embedding if not provided
-        if embed is None:
-            embed = next((key for key in latent_data.obsm.keys() if key.startswith("X_")), None)
+        if embed_key is None:
+            embed_key = next((key for key in latent_data.obsm.keys() if key.startswith("X_")), None)
 
-        if not batch_key or not label_key or not embed:
-            raise ValueError(f"Failed to detect batch_key={batch_key}, label_key={label_key}, or embed={embed}")
+        if not batch_key or not label_key or not embed_key:
+            raise ValueError(f"Failed to detect batch_key={batch_key}, label_key={label_key}, or embed={embed_key}")
 
-        print(f"Using parameters: batch_key={batch_key}, label_key={label_key}, embed={embed}")
+        print(f"Using parameters: batch_key={batch_key}, label_key={label_key}, embed={embed_key}")
 
         # Calculate metrics
-        return scib.metrics.metrics(
+        metrics=scib.metrics.metrics(
             latent_data,
             latent_data,
             batch_key=batch_key,
             label_key=label_key,
-            embed=embed,
+            embed=embed_key,
             ari_=True,
             nmi_=True,
             silhouette_=True,
             graph_conn_=True,
             isolated_labels_asw_=True,
         )
+        return metrics
 
 
 # Usage
 if __name__ == "__main__":
-    evaluator = Evaluator(latent_dir="./outputs", output_file="results.json")
-    evaluator.process_all_latents()
+    evaluator = Evaluator(latent_dir="./outputs")
+    evaluator.process_models()

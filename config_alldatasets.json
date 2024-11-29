@@ -51,22 +51,23 @@
       "umap_color_type": "cell_type"
     },
     "multivi": {
-      "device": "cuda:1",
+      "device": "cuda:0",
       "max_epochs": 500,
       "learning_rate": 0.0001,
       "umap_color_type": "cell_type"
     },
     "mowgli": {
-      "device": "cuda:0",
-      "latent_dimensions": 5,
+      "device": "cuda:1",
+      "latent_dimensions": 15,
       "optimizer": "sgd",
-      "tol_inner": 1e-5,
-      "max_iter_inner": 800,
       "umap_use_representation": "X_mowgli",
       "umap_num_neighbors": 20,
-      "learning_rate": 0.01,
       "umap_size": 50,
-      "umap_alpha": 0.7
+      "umap_alpha": 0.7,
+      "learning_rate": 0.01,
+      "tol_inner": 1e-7,
+      "max_iter_inner": 1000,
+      "umap_color_type": "cell_type"
     }
   },
   "preprocess_params": {
