@@ -21,6 +21,7 @@ class Evaluator:
             "multivi_output": MultiVI_Model,
             "mowgli_output": Mowgli_Model,
         }
+        self.embed=None
     def process_models(self):
         if not os.path.exists(self.latent_dir):
             raise FileNotFoundError(f"Directory not found: {self.latent_dir}")
@@ -47,7 +48,14 @@ class Evaluator:
                         model_instance.latent_filepath = os.path.join(model_dir, file)
                         latent_data = model_instance.load_latent()
                         latent_data.var_names_make_unique()
-                        sc.pp.neighbors(latent_data, use_rep="X_mofa")  # Update as necessary
+                        if isinstance(model_instance, MOFA_Model):
+                            sc.pp.neighbors(latent_data, use_rep="X_mofa")  
+                        elif isinstance(model_instance, Mowgli_Model):
+                            sc.pp.neighbors(latent_data, use_rep="X_mowgli")
+                        elif isinstance(model_instance, MultiVI_Model):
+                            sc.pp.neighbors(latent_data, use_rep="X_multivi")
+                        else:
+                            sc.pp.neighbors(latent_data, use_rep="X_pca")
 
                         # Calculate SCIB metrics
                         metrics = self.calculate_metrics(latent_data)
@@ -76,11 +84,11 @@ class Evaluator:
         embed_key=None
         # Auto-detect batch_key if not provided
         if batch_key is None:
-            batch_key = next((key for key in latent_data.obs.keys() if key.endswith(":batch")), None)
+            batch_key = next((key for key in latent_data.obs.keys() if key.endswith("batch")), None)
 
         # Auto-detect label_key if not provided
         if label_key is None:
-            label_key = next((key for key in latent_data.obs.keys() if key.endswith(":cell_type")), None)
+            label_key = next((key for key in latent_data.obs.keys() if key.endswith("cell_type")), None)
 
         # Auto-detect embedding if not provided
         if embed_key is None:
@@ -90,6 +98,7 @@ class Evaluator:
             raise ValueError(f"Failed to detect batch_key={batch_key}, label_key={label_key}, or embed={embed_key}")
 
         print(f"Using parameters: batch_key={batch_key}, label_key={label_key}, embed={embed_key}")
+        self.embed = embed_key
 
         # Calculate metrics
         metrics=scib.metrics.metrics(
@@ -97,7 +106,7 @@ class Evaluator:
             latent_data,
             batch_key=batch_key,
             label_key=label_key,
-            embed=embed_key,
+            embed=self.embed,
             ari_=True,
             nmi_=True,
             silhouette_=True,
