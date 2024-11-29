@@ -1,4 +1,6 @@
 {
+  "_run_user_params": false,
+  "_run_gridsearch": true,
   "data": {
     "dataset_Pbmc10k": {
       "data_path": "/home/zuzanna/data",

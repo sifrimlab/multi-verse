@@ -31,12 +31,10 @@ class Trainer:
         if hyperparams:
             for model_name, params in hyperparams.items():
                 if model_name in self.config["model"]:
-                    valid_keys = self.config["model"][model_name].keys()
+                    valid_keys = self.config["model"][model_name].get("grid_search_params", {}).keys()
                     filtered_params = {k: v for k, v in params.items() if k in valid_keys}
                     self.config["model"][model_name].update(filtered_params)
-                    print(f"Updated parameters for {model_name}: {params}")
-
-
+                    print(f"Updated parameters for {model_name}: {filtered_params}")
 
     def load_datasets(self):
         """
@@ -132,7 +130,7 @@ class Trainer:
             raise ValueError("Only accept datatype of concatenate or mudata.")
         return self.data
     
-    def model_select(self, dataset_dict, is_gridsearch=False):
+    def model_select(self, dataset_dict, **kwargs):
         """
         Initialize models for a specific dataset.
         """
@@ -140,6 +138,8 @@ class Trainer:
         data_concat = self.dataset_select(datasets_dict=datasets, data_type="concatenate")
         data_mudata = self.dataset_select(datasets_dict=datasets, data_type="mudata")
         models_for_data = {}
+        is_gridsearch = kwargs.get('is_gridsearch', False)  # Default to False if not provided
+
 
         for dataset_name in self.dataset_names:
             models = {}

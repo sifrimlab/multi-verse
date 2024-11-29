@@ -20,11 +20,11 @@ def main():
 
     # Run user-specified parameters
     user_run = UserRun(config_path)
-    user_results = user_run.run()
+    user_run.run()
 
     # Run grid search
     grid_search_run = GridSearchRun(config_path)
-    grid_results = grid_search_run.run()
+    grid_search_run.run()
 
     print("\n=== Code Run Succesfully ===")
 

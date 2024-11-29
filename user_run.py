@@ -8,11 +8,17 @@ class UserRun:
         Initialize the UserRun class and load configuration.
         """
         self.config = load_config(config_path)
+        self.run_user_params = self.config.get("_run_user_params", True)
+
 
     def run(self):
         """
         Run training and evaluation with user-specified parameters.
         """
+        if not self.run_user_params:
+            print("User specific parameter run is disabled in the configuration.")
+            return
+        
         print("\n=== Running User-Specified Parameters ===")
         trainer = Trainer(self.config)
         datasets = trainer.load_datasets()

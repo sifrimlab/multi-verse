@@ -17,6 +17,7 @@ def load_config(config_path="./config.json"):
     global _config_cache
     if _config_cache is None:
         try:
+            print("\n=== Loading .json file ===")
             with open(config_path, 'r', encoding='utf-8') as file:
                 _config_cache = json.load(file)
             print("Information form json file loaded successfully.")

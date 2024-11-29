@@ -16,7 +16,7 @@ import os
 import torch
 import scvi
 import re
-from sklearn.metrics import silhouette_score, davies_bouldin_score
+from sklearn.metrics import silhouette_score
 
 from config import load_config 
 
@@ -62,6 +62,8 @@ class ModelFactory:
     def umap(self):
         print("Create umap for presentation.")
     
+    def evaluate_model(self):
+        print("Write evaluation metrics for thi specific model for gridsearch")
 
 class PCA_Model(ModelFactory):
     """PCA implementation"""
@@ -200,10 +202,25 @@ class MOFA_Model(ModelFactory):
         if is_gridsearch:
             base_filename += "_gridsearch"
         self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
-        self.umap_filename = os.path.join(self.output_dir, f"{base_filename}_umap.png")
+        self.umap_filename = os.path.join(self.output_dir, f"_{base_filename}.png")
 
         print(f"MOFA+ initialized with {self.dataset_name}, {self.n_factors} factors to be trained with.")
 
+    def _compute_explained_variance(self):
+        """
+        Compute explained variance for MOFA factors.
+        """
+        try:
+            factors = self.dataset.obsm["X_mofa"]  # Extract latent factors
+            total_variance = np.var(self.dataset.X, axis=0).sum()  # Total variance in the dataset
+            factor_variances = np.var(factors, axis=0)  # Variance explained by each factor
+
+            explained_variance_ratio = factor_variances / total_variance
+            return explained_variance_ratio
+        except Exception as e:
+            print(f"Error computing explained variance: {e}")
+            return []
+    
     def to(self):
         """
         Method to set GPU or CPU mode for MOFA+.
@@ -221,10 +238,20 @@ class MOFA_Model(ModelFactory):
         print("Training MOFA+ Model")
         try:
             mu.tl.mofa(data=self.dataset, n_factors=self.n_factors, gpu_mode=self.gpu_mode)
-            self.explained_variance = self.dataset.uns["mofa"]["explained_variance"]
-
-            print(f"MOFA+ training completed with {self.n_factors} factors")
-            print(f"Explained variance per factor: {self.explained_variance}")
+            print("MOFA training completed.")
+        
+            # Debugging output
+            # print(f"Keys in dataset.uns['mofa']: {self.dataset.uns.get('mofa', {}).keys()}")
+            
+            # Compute explained variance if not available
+            if "explained_variance" in self.dataset.uns.get("mofa", {}):
+                self.explained_variance = self.dataset.uns["mofa"]["explained_variance"]
+                print(f"Explained variance per factor: {self.explained_variance}")
+            else:
+                # Manually calculate explained variance
+                self.explained_variance = self._compute_explained_variance()
+                print(f"Computed explained variance per factor: {self.explained_variance}")
+            
             print(f"Total explained variance: {sum(self.explained_variance)}")
         except Exception as e:
             print(f"Error during training: {e}")
@@ -322,7 +349,7 @@ class MultiVI_Model(ModelFactory):
         if is_gridsearch:
             base_filename += "_gridsearch"
         self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
-        self.umap_filename = os.path.join(self.output_dir, f"{base_filename}_umap.png")
+        self.umap_filename = os.path.join(self.output_dir, f"_{base_filename}.png")
         
         # Set up data for MultiVI model
         self.dataset = self.dataset[:, self.dataset.var["feature_types"].argsort()].copy()
@@ -453,7 +480,7 @@ class Mowgli_Model(ModelFactory):
         if is_gridsearch:
             base_filename += "_gridsearch"
         self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
-        self.umap_filename = os.path.join(self.output_dir, f"{base_filename}_umap.png")
+        self.umap_filename = os.path.join(self.output_dir, f"_{base_filename}.png")
         
     def to(self):
         """
