@@ -1,7 +1,7 @@
 {
   "data": {
     "dataset_Pbmc10k": {
-      "data_path": "/media/gambino/students_workdir/thihanh/IBP/data",
+      "data_path": "/home/zuzanna/data",
       "rna": {
         "file_name": "10x-Multiome-Pbmc10k-RNA.h5ad",
         "is_preprocessed": false,
@@ -14,7 +14,7 @@
       }
     },
     "dataset_TEA": {
-      "data_path": "/media/gambino/students_workdir/thihanh/IBP/h5mu_file",
+      "data_path": "/home/zuzanna/data",
       "rna": {
         "file_name": "GSM4949911_X061-AP0C1W1_leukopak_perm-cells_tea_fulldepth_cellranger-arc_filtered_feature_bc_matrix.h5",
         "is_preprocessed": false,
@@ -33,9 +33,9 @@
     }
   },
   "model": {
-    "is_mofa+": true,
-    "is_pca": true,
-    "is_multivi": true,
+    "is_mofa+": false,
+    "is_pca": false,
+    "is_multivi": false,
     "is_mowgli": false,
     "pca": {
       "n_components": 20,
@@ -60,7 +60,6 @@
       "device": "cuda:0",
       "latent_dimensions": 5,
       "optimizer": "sgd",
-      "learning_rate": 0.01,
       "tol_inner": 1e-5,
       "max_iter_inner": 800,
       "umap_use_representation": "X_mowgli",
