@@ -71,7 +71,8 @@ class Evaluator:
                         # Store metrics in the results dictionary
                         if model_folder not in results:
                             results[model_folder] = {}
-                        results[model_folder][dataset_name] =metrics_dict 
+                        filtered_metrics = {key: value for key, value in metrics_dict.items() if not np.isnan(value)}
+                        results[model_folder][dataset_name] =filtered_metrics
 
                     except Exception as e:
                         print(f"Error processing {model_folder} for {file}: {e}")
@@ -124,6 +125,7 @@ class Evaluator:
             graph_conn_=True,
             isolated_labels_asw_=True,
         )
+        
         return metrics
 
 
