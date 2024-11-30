@@ -374,14 +374,17 @@ class MultiVI_Model(ModelFactory):
         self.latent_filepath = os.path.join(self.output_dir, f"{self.base_filename}.h5ad")
         self.umap_filename = os.path.join(self.output_dir, f"_{self.base_filename}.png")
         
-        # Set up data for MultiVI model
-        self.dataset = self.dataset[:, self.dataset.var["feature_types"].argsort()].copy()
-        scvi.model.MULTIVI.setup_anndata(self.dataset, protein_expression_obsm_key=None)
-        self.model = scvi.model.MULTIVI(
-            self.dataset,
-            n_genes=(self.dataset.var["feature_types"] == "Gene Expression").sum(),
-            n_regions=(self.dataset.var["feature_types"] == "Peaks").sum(),
-            )
+        # Set up data for MultiVI model, Prostate data for this model is hard-code
+        if "feature_types" in self.dataset.var.keys():
+            self.dataset = self.dataset[:, self.dataset.var["feature_types"].argsort()].copy()
+            scvi.model.MULTIVI.setup_anndata(self.dataset, protein_expression_obsm_key=None)
+            self.model = scvi.model.MULTIVI(
+                self.dataset,
+                n_genes=(self.dataset.var["feature_types"] == "Gene Expression").sum(),
+                n_regions=(self.dataset.var["feature_types"] == "Peaks").sum(),
+                )
+        else:
+            raise ValueError("MultiVI not applicable for this case.")
         
     def update_output_dir(self):
         super().update_output_dir()

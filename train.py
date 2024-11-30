@@ -1,5 +1,6 @@
 import json
 import os
+import anndata as ad
 from model import PCA_Model, MOFA_Model, MultiVI_Model, Mowgli_Model
 from config import load_config
 from dataloader import DataLoader
@@ -25,6 +26,7 @@ class Trainer:
             key for key, value in self.data_config.items()
             if isinstance(value, dict) and "data_path" in value
         ]
+        self.data = None
         print("Datasets Detected:", self.dataset_names)
 
          # Update the configuration with hyperparameters, if provided
@@ -44,10 +46,14 @@ class Trainer:
         datasets = {}
         for dataset_name in self.dataset_names:
             dataset_info = self.data_config[dataset_name]
-            modality_list = [
-                key for key, value in dataset_info.items()
-                if isinstance(value, dict) and "file_name" in value # modality (i.e.'rna') must be a dictionary
-            ]
+            # Hard-code prostate data
+            if dataset_name != "dataset_prostate":
+                modality_list = [
+                    key for key, value in dataset_info.items()
+                    if isinstance(value, dict) and "file_name" in value # modality (i.e.'rna') must be a dictionary
+                ]
+            else:
+                modality_list = None
             dataset_path = dataset_info["data_path"]
             list_anndata = []
             # Assume there will be no modality when loading Prostate data, since loading separated modality will lose annotation metadata of this dataset
@@ -71,7 +77,7 @@ class Trainer:
                     "data": list_anndata
                 }
             else: 
-                # This for loading Prostate data as whole MuData object
+                # This for loading Prostate data as whole MuData object, this looks cumbersome I know I'm just stupid
                 file_path = os.path.join(dataset_path, dataset_info["file_name"])
                 is_preprocessed = dataset_info["is_preprocessed"]
                 annotation = dataset_info["annotation"]
@@ -97,8 +103,8 @@ class Trainer:
             concatenate = {}
             for dataset_name, dataset_data in datasets.items():
                 print(f"\n=== Concatenating dataset: {dataset_name} ===")
-                modalities = dataset_data["modalities"]
-                if modalities != None: # Either pbmck_10k or TEA dataset, prostate data is assumed to be loaded as whole (no modalities)
+                if "modalities" in dataset_data: # Either pbmck_10k or TEA dataset, prostate data is assumed to be loaded as whole (no modalities)
+                    modalities = dataset_data["modalities"]
                     list_anndata = dataset_data["data"]
                     data_concat = dataloader.anndata_concatenate(list_anndata=list_anndata, list_modality=modalities)
                     concatenate[dataset_name] = data_concat
@@ -116,8 +122,8 @@ class Trainer:
             mudata_input = {}
             for dataset_name, dataset_data in datasets.items():
                 print(f"\n=== Fusing dataset as MuData object: {dataset_name} ===")
-                modalities = dataset_data["modalities"]
-                if modalities != None:
+                if "modalities" in dataset_data:
+                    modalities = dataset_data["modalities"]
                     list_anndata = dataset_data["data"]
                     data_fuse = dataloader.fuse_mudata(list_anndata=list_anndata, list_modality=modalities)
                     mudata_input[dataset_name] = data_fuse

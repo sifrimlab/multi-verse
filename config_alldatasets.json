@@ -1,6 +1,6 @@
 {
-  "_run_user_params": false,
-  "_run_gridsearch": true,
+  "_run_user_params": true,
+  "_run_gridsearch": false,
   "data": {
     "dataset_Pbmc10k": {
       "data_path": "/media/gambino/students_workdir/thihanh/IBP/data",

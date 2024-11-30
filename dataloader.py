@@ -83,7 +83,7 @@ class DataLoader:
         """
         if self.file_path != "":
             if ".h5mu" in self.file_path:
-                mudata = mu.read_h5mu(self.file_path)
+                mudata = mu.read(self.file_path)
             elif ".h5" in self.file_path:
                 mudata =mu.read_10x_h5(self.file_path)
             elif ".mtx" in self.file_path:

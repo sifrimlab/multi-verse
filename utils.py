@@ -41,10 +41,6 @@ class GridSearchRun:
         # Load selected models for selected datasets (i.e. 2 datasets will have 2 PCAs, 2 mofa+,...)
         models_on_dataset_dict = self.trainer.model_select(self.datasets)
         print(models_on_dataset_dict)
-        # models_on_dataset_dict = {'dataset_Pbmc10k': {'pca': <model.PCA_Model>,'multivi': <model.MultiVI_Model>},
-                                # 'dataset_TEA': {'pca': <model.PCA_Model>,'multivi': <model.MultiVI_Model>}}
-        # If you looping ALL models from config then looping dataset, then there will be error if NOT ALL models are selected for datasets
-        # (i.e what if I only want PCA and Mowgli)
 
         for dataset_name, models_dict in models_on_dataset_dict.items():
 
