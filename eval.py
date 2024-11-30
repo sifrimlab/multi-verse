@@ -66,12 +66,12 @@ class Evaluator:
                         metrics = self.calculate_metrics(latent_data)
                         print("\nMetrics for dataset '{}':\n{}".format(dataset_name, metrics))
 
-                        # Define metric names to map to
+                        metrics_dict = metrics.squeeze().apply(lambda x: None if pd.isna(x) else x).to_dict()
 
                         # Store metrics in the results dictionary
                         if model_folder not in results:
                             results[model_folder] = {}
-                        results[model_folder][dataset_name] ="{}".format(metrics)
+                        results[model_folder][dataset_name] =metrics_dict 
 
                     except Exception as e:
                         print(f"Error processing {model_folder} for {file}: {e}")
