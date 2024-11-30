@@ -1,5 +1,6 @@
 import sys
-import os
+from train import Trainer
+from config import load_config
 import torch
 torch.cuda.is_available()
 
@@ -7,56 +8,49 @@ torch.cuda.is_available()
 import warnings
 warnings.filterwarnings("ignore")
 
-from train import Trainer
+from utils import GridSearchRun
 
+class Main:
+    def __init__(self, config_path="./config.json"):
+        """
+        Initialize the UserRun class and load configuration.
+        """
+        self.config = load_config(config_path)
+        self.run_user_params = self.config.get("_run_user_params", True)
 
-def main():
-    # Check if a config file is provided as a command-line argument
-    if len(sys.argv) != 2:
-        print("Usage: python main.py <config_file.json>")
-        sys.exit(1)
-
-    config_file = sys.argv[1]
-
-    # Verify if the provided file exists
-    if not os.path.exists(config_file):
-        print(f"Error: Configuration file '{config_file}' not found.")
-        sys.exit(1)
-
-    print(f"Using configuration file: {config_file}")
-
-    # Initialize the Trainer with the provided config file
-    my_trainer = Trainer(config_path=config_file)
-
-    # Load all datasets
-    datasets = my_trainer.load_datasets()
-
-    selected_models = my_trainer.model_select(datasets)  
-
-    # Iterate over datasets and their respective models
-    for dataset_name, dataset_data in datasets.items():
-        print(f"\n=== Processing dataset: {dataset_name} ===")
-        # print(dataset_data)
+    def run_default(self):
+        """
+        Run training and evaluation with user-specified parameters.
+        """
+        if not self.run_user_params:
+            print("User specific parameter run is disabled in the configuration.")
+            return
         
-        # Get the models specific to this dataset
-        if dataset_name not in selected_models:
-            print(f"No models selected for dataset {dataset_name}")
-            continue
+        print("\n=== Running User-Specified Parameters ===")
+        trainer = Trainer(self.config)
+        datasets = trainer.load_datasets()
 
-        models = selected_models[dataset_name]
-        print(f"Loaded models for {dataset_name}: {models.keys()}")
-        
-        # Train each model
-        for model_name, model in models.items():
-            try:
-                print(f"\nTraining model: {model_name} for dataset: {dataset_name}")
-                model.to()
-                model.train()
-                model.umap()  # Perform UMAP visualization if needed
-            except Exception as e:
-                print(f"Error while processing model '{model_name}' for dataset '{dataset_name}': {e}")
-                # Continue to the next model or dataset
-                continue
+        print("\n====== Start training ======\n")
+        trainer.train()
+
+    def main(self):
+        # Check if a config file is provided as a command-line argument
+        if len(sys.argv) != 2:
+            print("Usage: python run.py <config_file.json>")
+            sys.exit(1)
+
+        # Pass the configuration path to the classes
+        config_path = sys.argv[1]
+
+        # Run user-specified parameters
+        self.run_default()                          # 30 mins for 4 models on 1 dataset
+
+        # Run grid search
+        grid_search_run = GridSearchRun(config_path) # 1 hour for 4 models on 1 dataset
+        grid_search_run.run()
+
+        print("\n=== Code Run Succesfully ===")
 
 if __name__ == "__main__":
-    main()
+    main = Main(config_path="./config.json")
+    main.main()

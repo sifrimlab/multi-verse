@@ -38,14 +38,34 @@ class ModelFactory:
         self.latent_filepath = None
 
         self.is_grid_search = is_gridsearch  # Flag for grid search runs
+        self.base_filename = f"{self.model_name}_{self.dataset_name}"
+        self.output_dir = os.path.join(self.outdir, f"{self.model_name}_output") # Default
+        os.makedirs(self.output_dir, exist_ok=True)
 
-    
+    def update_output_dir(self):
         if self.is_grid_search:
             self.output_dir = os.path.join(self.outdir, "gridsearch_output")
+            self.base_filename += "_gridsearch"
+            self.latent_filepath = os.path.join(self.output_dir, f"{self.base_filename}.h5ad")
+            self.umap_filename = os.path.join(self.output_dir, f"_{self.base_filename}.png")
         else:
             self.output_dir = os.path.join(self.outdir, f"{self.model_name}_output")
-        
+
         os.makedirs(self.output_dir, exist_ok=True)
+
+    def update_parameters(self, **kwargs):
+        """
+        Updates the model parameters.
+        Args:
+            **kwargs: Keyword arguments with parameter names and their new values.
+                     Example: update_parameters(n_factors=10, n_iteration=500)
+        """
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                # Handle invalid parameter names if necessary
+                print(f"Warning: Invalid parameter name '{key}'")
 
     def to(self):
         print("Setting device for model CPU or GPU.")
@@ -87,13 +107,16 @@ class PCA_Model(ModelFactory):
         self.umap_color_type = pca_params.get("umap_color_type")  # Default ass 'cell_type'
 
         # Output for PCA model is in ./outputs
-        base_filename = f"pca_{dataset_name}"
-        if is_gridsearch:
-            base_filename += "_gridsearch"
-        self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
-        self.umap_filename = os.path.join(self.output_dir, f"_{base_filename}.png")
+        self.latent_filepath = os.path.join(self.output_dir, f"{self.base_filename}.h5ad")
+        self.umap_filename = os.path.join(self.output_dir, f"_{self.base_filename}.png")
 
         print(f"PCA initialized with {self.dataset_name}, {self.n_components} components.")
+
+    def update_output_dir(self):
+        super().update_output_dir()
+
+    def update_parameters(self, **kwargs):
+        super().update_parameters(**kwargs)
 
     def to(self):
         """
@@ -185,7 +208,7 @@ class MOFA_Model(ModelFactory):
         """
         print("Initializing MOFA+ Model")
         
-        super().__init__(dataset, dataset_name, config_path=config_path, model_name="mofa+", is_gridsearch=is_gridsearch)
+        super().__init__(dataset, dataset_name, config_path=config_path, model_name="mofa", is_gridsearch=is_gridsearch)
     
         mofa_params= self.model_params.get(self.model_name)
 
@@ -198,13 +221,16 @@ class MOFA_Model(ModelFactory):
         self.umap_color_type=mofa_params.get("umap_color_type")
 
         # Output for MOFA+ model is in ./outputs
-        base_filename = f"mofa_{dataset_name}"
-        if is_gridsearch:
-            base_filename += "_gridsearch"
-        self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
-        self.umap_filename = os.path.join(self.output_dir, f"_{base_filename}.png")
+        self.latent_filepath = os.path.join(self.output_dir, f"{self.base_filename}.h5ad")
+        self.umap_filename = os.path.join(self.output_dir, f"_{self.base_filename}.png")
 
         print(f"MOFA+ initialized with {self.dataset_name}, {self.n_factors} factors to be trained with.")
+
+    def update_output_dir(self):
+        super().update_output_dir()
+    
+    def update_parameters(self, **kwargs):
+        super().update_parameters(**kwargs)
 
     def _compute_explained_variance(self):
         """
@@ -345,11 +371,8 @@ class MultiVI_Model(ModelFactory):
             self.umap_color_type = None  # Fallback to None if not found
 
         # Output for Multivi model is in ./outputs
-        base_filename = f"multivi_{dataset_name}"
-        if is_gridsearch:
-            base_filename += "_gridsearch"
-        self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
-        self.umap_filename = os.path.join(self.output_dir, f"_{base_filename}.png")
+        self.latent_filepath = os.path.join(self.output_dir, f"{self.base_filename}.h5ad")
+        self.umap_filename = os.path.join(self.output_dir, f"_{self.base_filename}.png")
         
         # Set up data for MultiVI model
         self.dataset = self.dataset[:, self.dataset.var["feature_types"].argsort()].copy()
@@ -359,7 +382,13 @@ class MultiVI_Model(ModelFactory):
             n_genes=(self.dataset.var["feature_types"] == "Gene Expression").sum(),
             n_regions=(self.dataset.var["feature_types"] == "Peaks").sum(),
             )
-            
+        
+    def update_output_dir(self):
+        super().update_output_dir()
+    
+    def update_parameters(self, **kwargs):
+        super().update_parameters(**kwargs)
+
     def to(self):
         """
         Method to set GPU or CPU mode for MOFA+.
@@ -476,11 +505,14 @@ class Mowgli_Model(ModelFactory):
         print(f"Mowgli model initiated with {self.latent_dimensions} dimension.")
         
         # Output for Mowgli model is in ./outputs
-        base_filename = f"mowgli_{dataset_name}"
-        if is_gridsearch:
-            base_filename += "_gridsearch"
-        self.latent_filepath = os.path.join(self.output_dir, f"{base_filename}.h5ad")
-        self.umap_filename = os.path.join(self.output_dir, f"_{base_filename}.png")
+        self.latent_filepath = os.path.join(self.output_dir, f"{self.base_filename}.h5ad")
+        self.umap_filename = os.path.join(self.output_dir, f"_{self.base_filename}.png")
+    
+    def update_output_dir(self):
+        super().update_output_dir()
+    
+    def update_parameters(self, **kwargs):
+        super().update_parameters(**kwargs)
         
     def to(self):
         """

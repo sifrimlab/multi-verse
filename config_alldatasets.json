@@ -3,7 +3,7 @@
   "_run_gridsearch": true,
   "data": {
     "dataset_Pbmc10k": {
-      "data_path": "/home/zuzanna/data",
+      "data_path": "/media/gambino/students_workdir/thihanh/IBP/data",
       "rna": {
         "file_name": "10x-Multiome-Pbmc10k-RNA.h5ad",
         "is_preprocessed": false,
@@ -16,7 +16,7 @@
       }
     },
     "dataset_TEA": {
-      "data_path": "/home/zuzanna/data",
+      "data_path": "/media/gambino/students_workdir/thihanh/IBP/h5mu_file",
       "rna": {
         "file_name": "GSM4949911_X061-AP0C1W1_leukopak_perm-cells_tea_fulldepth_cellranger-arc_filtered_feature_bc_matrix.h5",
         "is_preprocessed": false,
@@ -45,17 +45,23 @@
       "umap_random_state": 1,
       "umap_color_type": "cell_type",
       "grid_search_params": {
-        "n_components": [10, 15]
+        "n_components": [
+          10,
+          15
+        ]
       }
     },
-    "mofa+": {
+    "mofa": {
       "device": "cuda:0",
       "n_factors": 20,
       "n_iteration": 1000,
       "umap_random_state": 1,
       "umap_color_type": "cell_type",
       "grid_search_params": {
-        "n_factors": [10, 15]
+        "n_factors": [
+          10,
+          15
+        ]
       }
     },
     "multivi": {
@@ -64,8 +70,14 @@
       "learning_rate": 0.0001,
       "umap_color_type": "cell_type",
       "grid_search_params": {
-        "learning_rate": [0.01, 0.001],
-        "max_epochs": [100, 300]
+        "learning_rate": [
+          0.01,
+          0.001
+        ],
+        "max_epochs": [
+          100,
+          300
+        ]
       }
     },
     "mowgli": {
@@ -73,15 +85,15 @@
       "latent_dimensions": 15,
       "optimizer": "sgd",
       "umap_use_representation": "X_mowgli",
-      "umap_num_neighbors": 20,
-      "umap_size": 50,
-      "umap_alpha": 0.7,
       "learning_rate": 0.01,
       "tol_inner": 1e-7,
       "max_iter_inner": 1000,
       "umap_color_type": "cell_type",
       "grid_search_params": {
-        "learning_rate": [0.1, 0.001]
+        "learning_rate": [
+          0.1,
+          0.001
+        ]
       }
     }
   },

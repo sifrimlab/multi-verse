@@ -156,7 +156,7 @@ class Trainer:
             if self.model_info["is_mofa+"]:
                 mofa = MOFA_Model(dataset=data_mudata[dataset_name], dataset_name=dataset_name, 
                                   config_path=self.config_path, is_gridsearch=is_gridsearch)
-                models["mofa+"] = mofa
+                models["mofa"] = mofa
 
             if self.model_info["is_mowgli"]:
                 mowgli = Mowgli_Model(dataset=data_mudata[dataset_name], dataset_name=dataset_name, 
@@ -170,18 +170,18 @@ class Trainer:
     def train(self):
         try:
             if self.models==None:
-                self.model_select()
+                if self.data==None:
+                    self.load_datasets()
+                self.model_select(self.data)
 
             for dataset_name, model_dict in self.models.items():
                 print(f"\n=== Training for {dataset_name} ===")
                 for model_name, model in model_dict.items():
                     print(f"\n=== {model_name} training ===")
+                    model.update_output_dir() # This will create {model_name}_output folder
                     model.to()
                     model.train()
                     model.save_latent()
+                    model.umap()
         except ValueError as e:
             print(f"Something is wrong in train() function: {e}")
-
-
-
-    
