@@ -41,10 +41,16 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
-      <li><a href="#practicalities">Practicalities</a></li>
+    <li><a href="#practicalities">Practicalities</a></li>
+      <ul>
+        <li><a href="#model-overview">Model Overview</a></li>
+        <li><a href="#json-file">JSON File</a></li>
+        <li><a href="#results-format">Results Format</a></li>
+      </ul>
     <li><a href="#contributing">Contributing</a></li>
    <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
+    <li><a href="#contributors">Contributors</a></li>
   </ol>
 </details>
 
@@ -99,8 +105,8 @@ It is recommended to create a new virtual enviroment with [conda](https://www.an
 |------------|------------------------|---------------------------------------------------|--------------------------------|----------------------------|
 | PCA        | Unpaired               | Linear Dimensionality Reduction                   | Variance Score                 | Yes                        |
 | MOFA+      | Paired                 | Variational Inference                              | Variance Score                | Yes                        |
-| MultiVI    | Paired-guided          | Deep Generative Model                              | Silhouette score              | No                         |
-| Mowgli     | Paired                 | Optimal Transport and Nonnegative Matrix Factorization (NMF) | Optimal Transport Loss        | No                         |
+| MultiVI    | Paired-guided          | Deep Generative Model                              | Silhouette score              | Yes                         |
+| Mowgli     | Paired                 | Optimal Transport and Nonnegative Matrix Factorization (NMF) | Optimal Transport Loss        | Yes                         |
 
 
 ### JSON file
@@ -161,6 +167,21 @@ In the preprocess_params the preprocessing parameters need to be specified for R
 The device to be used for modality preprocessing needs to be specified in the device section at the end:
 - device: Specifies the default device (cpu or gpu) for training.
 
+### Results Format
+
+#### Gridsearch
+For the grid search, the UMAP and latent embeddings are generated and saved only for the best model for each model-dataset combination after completing the grid search for that combination. The folder is saved in the ./outputs/gridsearch_output folder. Finally the summary of the gridsearch results is printed in the console. There the value of the best score and parameters for each model-dataset combination.
+
+#### Evaluation
+The evaluation process assesses the performance of each model using several metrics using [scIB-metrics](https://scib-metrics.readthedocs.io/en/stable/), applied to the latent embeddings generated during the training. Results are summarized for each model-dataset combination and saved in ./outputs/results.json file. 
+
+The following metrics are calculated using the scib.metrics.metrics module:
+
+- Adjusted Rand Index (ARI): Measures clustering accuracy compared to known annotations.
+- Normalized Mutual Information (NMI): Evaluates the agreement between cluster assignments and annotations.
+- Silhouette Score: Assesses the quality of clustering in terms of sample separation.
+- Graph Connectivity (Graph Conn): Evaluates batch mixing and integration effectiveness.
+- Isolated Labels Silhouette Score (Isolated ASW): Quantifies how well isolated clusters are preserved after integration.
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -185,6 +206,26 @@ Distributed under the GPL-3 License. See `LICENSE` for more information.
 <!-- CONTACT -->
 ## Contact
 Project Link: https://github.com/sifrimlab/multi-verse
+
+
+## Contributors
+This project was developed as part of the Integrated Bioinformatics Project (B-KUL-I0U20A) course at the Faculty of Bioscience Engineering, KU Leuven.
+
+#### Authors
+[Yuxin Qiu](https://github.com/yuxin0924)
+
+[Thi Hanh Nguyen Ly](https://github.com/HannahLy1204)
+
+[Zuzanna Olga Bednarska](https://github.com/ZOBednar)
+#### Supervisors
+Anis Ismail
+
+Lorenzo Venturelli
+#### Promotor
+Prof. Alejandro Sifrim
+#### Course Coordinator
+Prof. Vera van Noort
+
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
