@@ -41,10 +41,10 @@ class Evaluator:
         for dataset_name, model_dict in model_trainer.items():
             for model_name, model_obj in model_dict.items():
                 if model_name == "pca" and isinstance(model_obj, PCA_Model):
-                    adata_unint =  model_obj.dataset # Original input dataset for PCA_model
+                    adata_unint =  model_obj.load_latent() # Original input dataset for PCA_model
                     if "batch" not in adata_unint.obs_keys():
                         adata_unint.obs["batch"] = "batch_1"
-                    sc.pp.neighbors(adata_unint, use_rep='X', n_neighbors=20) 
+                    sc.pp.neighbors(adata_unint, use_rep='X_pca') 
                     sc.tl.leiden(adata_unint)
                     self.adata_unint[dataset_name] = adata_unint
         self.model_list = model_trainer
