@@ -16,6 +16,7 @@ import os
 import torch
 import scvi
 import re
+import pandas as pd
 from sklearn.metrics import silhouette_score
 
 from config import load_config 
@@ -133,8 +134,10 @@ class PCA_Model(ModelFactory):
         print("Training PCA Model")
 
         # Fit PCA and transform the data with scanpy
-        sc.pp.pca(data=self.dataset, n_comps=self.n_components, use_highly_variable=True)
-        
+        if 'highly_variable' in self.dataset.var.keys():
+            sc.pp.pca(data=self.dataset, n_comps=self.n_components, use_highly_variable=True)
+        else:
+            sc.pp.pca(data=self.dataset, n_comps=self.n_components, use_highly_variable=False)
         # Save latent representation
         self.latent = self.dataset.obsm["X_pca"]
 
@@ -181,7 +184,7 @@ class PCA_Model(ModelFactory):
 
         sc.pl.umap(self.dataset, color=self.umap_color_type, save=filename)
 
-        print(f"UMAP plot for {self.model_name} {self.dataset_name} saved as {filename}")
+        print(f"UMAP plot for {self.model_name} {self.dataset_name} saved as umap{filename}")
 
     def evaluate_model(self):
         """
@@ -331,7 +334,7 @@ class MOFA_Model(ModelFactory):
         sc.settings.figdir = self.output_dir
         filename = os.path.basename(self.umap_filename) 
         sc.pl.umap(self.dataset, color=self.umap_color_type, save=filename)
-        print(f"UMAP plot saved as {filename}")
+        print(f"UMAP plot saved as umap{filename}")
 
     def evaluate_model(self):
         """
@@ -374,17 +377,33 @@ class MultiVI_Model(ModelFactory):
         self.latent_filepath = os.path.join(self.output_dir, f"{self.base_filename}.h5ad")
         self.umap_filename = os.path.join(self.output_dir, f"_{self.base_filename}.png")
         
-        # Set up data for MultiVI model, Prostate data for this model is hard-code
+        # Set up data for MultiVI model
         if "feature_types" in self.dataset.var.keys():
-            self.dataset = self.dataset[:, self.dataset.var["feature_types"].argsort()].copy()
-            scvi.model.MULTIVI.setup_anndata(self.dataset, protein_expression_obsm_key=None)
-            self.model = scvi.model.MULTIVI(
-                self.dataset,
-                n_genes=(self.dataset.var["feature_types"] == "Gene Expression").sum(),
-                n_regions=(self.dataset.var["feature_types"] == "Peaks").sum(),
-                )
+            try: 
+                self.dataset = self.dataset[:, self.dataset.var["feature_types"].argsort()].copy()
+
+                # Extract protein information if any
+                if "Protein Expression" in self.dataset.var["feature_types"].unique():
+                    protein_indices = self.dataset.var["feature_types"] == "protein expression"
+                    protein_expression = self.dataset.X[:, protein_indices]
+                    protein_names = self.dataset.var_names[protein_indices]
+                    protein_expression_df = pd.DataFrame(protein_expression, 
+                                     index=self.dataset.obs_names, 
+                                     columns=protein_names)
+                    self.dataset.obsm["protein_expression"] = protein_expression_df
+                    scvi.model.MULTIVI.setup_anndata(self.dataset, protein_expression_obsm_key="protein_expression")
+                else:
+                    scvi.model.MULTIVI.setup_anndata(self.dataset, protein_expression_obsm_key=None)
+                
+                self.model = scvi.model.MULTIVI(self.dataset,
+                                                n_genes=(self.dataset.var["feature_types"] == "Gene Expression").sum(),
+                                                n_regions=(self.dataset.var["feature_types"] == "Peaks").sum(),
+                                                )
+            except Exception as e:
+                print(f"Something is wrong in MultiVI initialization: {e}")
+                raise
         else:
-            raise ValueError("MultiVI not applicable for this case.")
+            raise ValueError("MultiVI initialization needs 'feature_types' in variable keys to setup genes (RNA-seq) and genomic regions (ATAC-seq)!")
         
     def update_output_dir(self):
         super().update_output_dir()
@@ -458,7 +477,7 @@ class MultiVI_Model(ModelFactory):
             sc.pl.umap(self.dataset, color=self.umap_color_type, 
                        save=filename)
             print(f"A UMAP plot for MultiVI model with dataset {self.dataset_name} "\
-                  f"was succesfully generated and saved as {filename}")
+                  f"was succesfully generated and saved as umap{filename}")
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")
@@ -612,7 +631,7 @@ class Mowgli_Model(ModelFactory):
             sc.pl.umap(self.dataset, color=self.umap_color_type, save=filename)
         
             print(f"A UMAP plot for Mowgli model with dataset {self.dataset_name} was successfully" \
-                  f"generated and saved as {filename}")
+                  f"generated and saved as umap{filename}")
 
         except Exception as e:
             print(f"Error generating UMAP: {e}")

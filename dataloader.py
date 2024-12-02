@@ -52,6 +52,9 @@ class DataLoader:
             elif ".h5mu" in self.file_path:
                 mudata = mu.read_h5mu(self.file_path)
                 adata = mudata[self.modality]
+                # This is hard-code for Prostate data, not to loss batch information in the metadata
+                adata.obs["batch"] = mudata.obs["batch"]
+                adata.obs["mod_id"] = mudata.obs["mod_id"]
             elif ".h5" in self.file_path:
                 mudata =mu.read_10x_h5(self.file_path)
                 adata = mudata[self.modality]
@@ -59,11 +62,16 @@ class DataLoader:
             if adata:  # Check if adata is not None
                 adata.var_names_make_unique()
 
-                # Annotation processing
+                # Annotation processing,this looks cumbersome and hard-coded I know I'm just stupid
                 if self.annotation == None:
+                    # Adding annotation as "cell_type" to avoid conflicts in plotting umap
                     self.annotation = "cell_type"
                     num_obs = adata.n_obs
-                    adata.obs[self.annotation] = np.zeros(num_obs, dtype=int)
+                    adata.obs[self.annotation] = np.zeros(num_obs, dtype=int) # Zeros for no-annotation
+                elif self.annotation != "cell_type":
+                    # Adding annotation as "cell_type" to avoid conflicts in plotting umap (umap color type = "cell_type")
+                    adata.obs["cell_type"] = adata.obs[self.annotation]
+                    self.annotation = "cell_type"
 
                 self.data = adata
                 return self.data
@@ -72,7 +80,7 @@ class DataLoader:
         else:
             raise ValueError("Modality and file_path must be provided for anndata loading.")
 
-    def read_mudata(self) -> md.MuData:
+    def read_mudata(self) -> md.MuData: # This actually has not implemented anywhere, can be get rid of.
         """
         Read h5mu file as MuData object.
         Args:
@@ -97,7 +105,7 @@ class DataLoader:
         self.data = mudata
         return self.data
 
-    def fuse_mudata(self, list_anndata: List[ad.AnnData] = None, list_modality: List[str] = None, annotate: str ="cell_type") -> md.MuData:
+    def fuse_mudata(self, list_anndata: List[ad.AnnData] = None, list_modality: List[str] = None) -> md.MuData:
         """
         Fusing paired anndata as MuData
         intersect_obs will be used if number of obs not equivalent
@@ -121,18 +129,18 @@ class DataLoader:
         self.data = mu.MuData(data_dict)
         mu.pp.intersect_obs(self.data)   # Make sure number of cells are the same for all modalities
 
-        # setting annotation for mudata
-        if annotate in self.data["rna"].obs.columns:
-            self.data.obs[annotate] = self.data["rna"].obs[annotate]
+        # Hard-code "cell_type" to avoid conflict
+        if "cell_type" in self.data["rna"].obs.columns:
+            self.data.obs["cell_type"] = self.data["rna"].obs["cell_type"]
         else:
             # If there is no 'cell_type' annotation in rna modality
-            print("No annotation -> setting annotation as 'cell_type' = 0")
+            print("No annotation -> setting annotation as 'cell_type' = 0 to avoid conflicts.")
             num_obs = self.data.n_obs
-            self.data.obs[annotate] = np.zeros(num_obs, dtype=int)
+            self.data.obs["cell_type"] = np.zeros(num_obs, dtype=int)
         
         return self.data
 
-    def anndata_concatenate(self, list_anndata: List[ad.AnnData] = None, list_modality: List[str] = None, annotate: str ="cell_type") -> ad.AnnData:
+    def anndata_concatenate(self, list_anndata: List[ad.AnnData] = None, list_modality: List[str] = None) -> ad.AnnData:
         """
         Args:
             list_modality: A list of strings representing the modalities (e.g., ["rna", "atac", "adt"]).
@@ -145,14 +153,15 @@ class DataLoader:
         for mod in list_modality:
             list_ann.append(mudata[mod])
 
-        anndata = ad.concat(list_ann, axis="var") # concatenate based on "var" axis
+        anndata = ad.concat(list_ann, axis="var", label="cell_type", merge="unique", uns_merge="unique")
 
-        # setting annotation for mudata
+        # Hard-code "cell_type" to avoid conflict (Should already be available when fuse_mudata is called above)
         num_obs = anndata.n_obs
-        if annotate in mudata.obs.columns:
-            anndata.obs[annotate] = mudata.obs[annotate]
+        if "cell_type" in mudata.obs.columns:
+            anndata.obs["cell_type"] = mudata.obs["cell_type"]
         else:
-            anndata.obs[annotate] = np.zeros(num_obs, dtype=int)
+            # No annotation -> setting annotation as 'cell_type' = 0 to avoid conflicts.
+            anndata.obs["cell_type"] = np.zeros(num_obs, dtype=int)
         
         anndata.obs["modality"] = np.zeros(num_obs, dtype=int) # Adding this to prevent error in multiVI model
         self.data = anndata
@@ -171,9 +180,9 @@ class DataLoader:
         if self.file_path != "":
             if self.modality != "" :
                 self.read_anndata()
+                self.data.var_names_make_unique()
+                self.data.layers["counts"] = self.data.X.copy()
                 if not self.is_preprocessed:
-                    self.data.var_names_make_unique()
-                    self.data.layers["counts"] = self.data.X.copy()
                     pre = Preprocessing(anndata=self.data, config_path=self.config_path)
                     # RNA preprocessing
                     if self.modality=="rna":
@@ -188,10 +197,9 @@ class DataLoader:
                     else:
                         raise ValueError("Preprocessing for this modality is not applicable!")
             else:
-                # If there is no modality (assume to load entire mudata object)
-                self.read_mudata()
+                raise ValueError("Modality must be provided to read anndata")
         else:
-            raise ValueError("File_path must be provided to read anndata")
+            raise ValueError("File_path must be provided to be read")
         return self.data
 
 

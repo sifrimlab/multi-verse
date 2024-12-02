@@ -51,5 +51,21 @@
             "isolated_label_silhouette": 0.6507633080041252,
             "graph_conn": 1.0
         }
+    },
+    "dataset_prostate": {
+        "pca": {
+            "NMI_cluster/label": 0.3203330141498041,
+            "ARI_cluster/label": 0.08052130757519284,
+            "ASW_label": 0.4352164566516876,
+            "isolated_label_silhouette": 0.5176489312933492,
+            "graph_conn": 0.7003536950035419
+        },
+        "mofa": {
+            "NMI_cluster/label": 0.3207491275584482,
+            "ARI_cluster/label": 0.08761832688077767,
+            "ASW_label": 0.44201459723090125,
+            "isolated_label_silhouette": 0.5161787160873473,
+            "graph_conn": 0.78677188969102
+        }
     }
 }
