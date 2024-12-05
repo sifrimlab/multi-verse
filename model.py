@@ -241,11 +241,27 @@ class MOFA_Model(ModelFactory):
         """
         try:
             factors = self.dataset.obsm["X_mofa"]  # Extract latent factors
-            total_variance = np.var(self.dataset.X, axis=0).sum()  # Total variance in the dataset
-            factor_variances = np.var(factors, axis=0)  # Variance explained by each factor
+            # print(f"Latent factors (X_mofa) shape: {factors.shape}")
+
+            # Compute total variance from raw data across modalities
+            total_variance = 0
+            for modality in self.dataset.mod.values():
+                if hasattr(modality.X, "toarray"):
+                    modality_data = modality.X.toarray()  # Convert sparse to dense if needed
+                else:
+                    modality_data = modality.X
+                total_variance += np.var(modality_data, axis=0).sum()
+
+            # print(f"Total variance from all modalities: {total_variance}")
+
+            # Variance explained by factors
+            factor_variances = np.var(factors, axis=0)
+            # print(f"Factor variances: {factor_variances}")
 
             explained_variance_ratio = factor_variances / total_variance
+            # print(f"Explained variance ratio per factor: {explained_variance_ratio}")
             return explained_variance_ratio
+        
         except Exception as e:
             print(f"Error computing explained variance: {e}")
             return []
