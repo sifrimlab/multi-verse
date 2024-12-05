@@ -41,12 +41,13 @@ class Evaluator:
         for dataset_name, model_dict in model_trainer.items():
             for model_name, model_obj in model_dict.items():
                 if model_name == "pca" and isinstance(model_obj, PCA_Model):
-                    adata_unint =  model_obj.load_latent() # Original input dataset for PCA_model
+                    adata_unint =  model_obj.load_latent() # Original input dataset taken from PCA_model (no integration happen)
                     if "batch" not in adata_unint.obs_keys():
                         adata_unint.obs["batch"] = "batch_1"
-                    sc.pp.neighbors(adata_unint, use_rep='X') 
+                    sc.pp.neighbors(adata_unint, use_rep='X') # Using raw gene expression as connectivities
                     sc.tl.leiden(adata_unint)
                     self.adata_unint[dataset_name] = adata_unint
+                    break
         self.model_list = model_trainer
         return self.adata_unint
 
