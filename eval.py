@@ -44,7 +44,7 @@ class Evaluator:
                     adata_unint =  model_obj.load_latent() # Original input dataset for PCA_model
                     if "batch" not in adata_unint.obs_keys():
                         adata_unint.obs["batch"] = "batch_1"
-                    sc.pp.neighbors(adata_unint, use_rep='X_pca') 
+                    sc.pp.neighbors(adata_unint, use_rep='X') 
                     sc.tl.leiden(adata_unint)
                     self.adata_unint[dataset_name] = adata_unint
         self.model_list = model_trainer
