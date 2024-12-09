@@ -237,5 +237,5 @@ Prof. Vera van Noort
 [stars-url]: https://github.com/sifrimlab/multi-verse/stargazers
 [issues-shield]: https://img.shields.io/github/issues/sifrimlab/multi-verse.svg?style=for-the-badge
 [issues-url]: https://github.com/sifrimlab/multi-verse/issues
-[license-shield]: https://img.shields.io/badge/license-GPL--3.0--only-green?style=for-the-badge
+[license-shield]: https://img.shields.io/badge/license-LGPL--3.0--only-green?style=for-the-badge
 [license-url]: https://github.com/sifrimlab/multi-verse/LICENSE
