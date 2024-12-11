@@ -1,0 +1,71 @@
+{
+    "dataset_Pbmc10k": {
+        "pca": {
+            "NMI_cluster/label": 0.8520677253673425,
+            "ARI_cluster/label": 0.8454428326650233,
+            "ASW_label": 0.6438820511102676,
+            "isolated_label_silhouette": 0.6520081468563723,
+            "graph_conn": 0.9950999758414866
+        },
+        "multivi": {
+            "NMI_cluster/label": 0.8032703683995328,
+            "ARI_cluster/label": 0.7893025324712277,
+            "ASW_label": 0.6310221254825592,
+            "isolated_label_silhouette": 0.6753542183065101,
+            "graph_conn": 0.9796686337893167
+        },
+        "mofa": {
+            "NMI_cluster/label": 0.8671126303830492,
+            "ARI_cluster/label": 0.8630830723014336,
+            "ASW_label": 0.6652193241222097,
+            "isolated_label_silhouette": 0.6669702575483019,
+            "graph_conn": 0.994316058836017
+        },
+        "mowgli": {
+            "NMI_cluster/label": 0.04245727015179038,
+            "ARI_cluster/label": -7.072952705699116e-06,
+            "ASW_label": 0.5,
+            "isolated_label_silhouette": 0.5,
+            "graph_conn": 0.15155097896879557
+        }
+    },
+    "dataset_TEA": {
+        "pca": {
+            "NMI_cluster/label": 0.905487202533847,
+            "ARI_cluster/label": 0.7711190810641877,
+            "ASW_label": 0.6103340610861778,
+            "isolated_label_silhouette": 0.6161744867141048,
+            "graph_conn": 1.0
+        },
+        "multivi": {
+            "NMI_cluster/label": 0.8454280962971819,
+            "ARI_cluster/label": 0.7154014837197193,
+            "ASW_label": 0.6156382486224174,
+            "isolated_label_silhouette": 0.6237119472026825,
+            "graph_conn": 1.0
+        },
+        "mofa": {
+            "NMI_cluster/label": 0.9231000620165882,
+            "ARI_cluster/label": 0.9147552818142459,
+            "ASW_label": 0.6374446548109153,
+            "isolated_label_silhouette": 0.6507633080041252,
+            "graph_conn": 1.0
+        }
+    },
+    "dataset_prostate": {
+        "pca": {
+            "NMI_cluster/label": 0.3203330141498041,
+            "ARI_cluster/label": 0.08052130757519284,
+            "ASW_label": 0.4352164566516876,
+            "isolated_label_silhouette": 0.5176489312933492,
+            "graph_conn": 0.7003536950035419
+        },
+        "mofa": {
+            "NMI_cluster/label": 0.3207491275584482,
+            "ARI_cluster/label": 0.08761832688077767,
+            "ASW_label": 0.44201459723090125,
+            "isolated_label_silhouette": 0.5161787160873473,
+            "graph_conn": 0.78677188969102
+        }
+    }
+}
