@@ -74,6 +74,7 @@ To get a local copy up and running follow steps below.
 ### Prerequisites
 
 It is recommended to create a new virtual enviroment with [conda](https://www.anaconda.com/).
+
 cmake is required for louvain package to be installed properly.
 
 ### Installation
@@ -130,7 +131,7 @@ Specifies the datasets used in the pipeline.
 
 This pipeline comes preconfigured with two datasets, dataset_Pbmc10k and dataset_TEA, which serve as examples for model comparison or tutorials for getting started with the pipeline. These datasets are already integrated into the configuration file and are ready to use without additional setup.
 
-- dataset_Pbmc10k - download [here](--------------)
+- dataset_Pbmc10k - download [here](https://drive.google.com/drive/u/0/folders/1uq6UJFaCqcrV7XjAiNmfdptKW0BfL0Ha)
   - Description: A multi-modal dataset featuring RNA and ATAC data from 10,000 Peripheral Blood Mononuclear Cells (PBMCs).
   - Data Path: The data is located in the directory specified by data_path.
   - Modalities:
@@ -138,7 +139,7 @@ This pipeline comes preconfigured with two datasets, dataset_Pbmc10k and dataset
     - ATAC: 10x-Multiome-Pbmc10k-ATAC.h5ad
   - Annotation: Contains cell type annotations, useful for visualization and evaluation.
 
-- dataset_TEA - download [here](--------------)
+- dataset_TEA - download [here](https://drive.google.com/drive/u/0/folders/1uq6UJFaCqcrV7XjAiNmfdptKW0BfL0Ha)
   - Description: A multi-modal dataset with RNA, ATAC, and ADT modalities, originating from a leukopak sample.
   - Data Path: The data is located in the directory specified by data_path.
   - Modalities:
