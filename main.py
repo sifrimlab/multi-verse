@@ -1,23 +1,3 @@
-<<<<<<< HEAD
-import dataloader
-import eval
-import model
-import train
-import utils
-import ProcessingRNA
-import PrepocessingATAC
-
-
-filename = "brain3k_multiome"
-
-mdata = dataloader.func1(filename)
-
-ProcessingRNA.Processing_RNA(mdata)
-PrepocessingATAC.Prepocessing_ATAC(mdata)
-
-mdata_new = train.train(mdata)
-mdata_new.write("data/brain3k_processed.h5mu")
-=======
 import sys
 from train import Trainer
 from eval import Evaluator
@@ -66,4 +46,3 @@ def main():
 
 if __name__ == "__main__":
     main()
->>>>>>> ffffc021418819b07185abcbb534838868f214db

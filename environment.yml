@@ -1,14 +1,16 @@
 name: multiverse
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - ipykernel
-  - muon
   - python
   - pytorch
-  - scvi-tools
-  - louvain
+  - muon==0.1.7
+  - scvi-tools==1.2.0
+  - louvain==0.8.2
+  - scanpy==1.10.3
   - pip:
     - mofapy2==0.7.2
     - mowgli==0.1.0
-    - scib
+    - scib==1.1.5
