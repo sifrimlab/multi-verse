@@ -74,6 +74,7 @@ To get a local copy up and running follow steps below.
 ### Prerequisites
 
 It is recommended to create a new virtual enviroment with [conda](https://www.anaconda.com/).
+cmake is required for louvain package to be installed properly.
 
 ### Installation
 
@@ -86,7 +87,7 @@ It is recommended to create a new virtual enviroment with [conda](https://www.an
 2. Create a new conda environment:
     ```bash
     conda env create -f environment.yml
-    conda activate multi_verse
+    conda activate multiverse
     ```
 
 ## Usage
